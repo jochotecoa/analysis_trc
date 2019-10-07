@@ -1,0 +1,108 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Loading libraries and defining functions
+```{r}
+##### LIBRARIES #####
+list.of.packages <- c("pbmcapply", "foreach", "doParallel")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if (length(new.packages)) install.packages(new.packages)
+
+library(pbmcapply)
+library(foreach)
+library(doParallel)
+
+##### FUNCTIONS #####
+
+greppend <- function(pattern, 
+                     x, 
+                     x.col.input = colnames(x),
+                     x.col.output = colnames(x)) {
+  pb = progressBar(min = 0, max = length(pattern))
+  new.table = data.frame()
+  for (variable in 1:length(pattern)) {
+    pos = grep(pattern = pattern[variable], x = x[, x.col.input])
+    new.table = rbind.data.frame(new.table, x[pos, x.col.output])
+    setTxtProgressBar(pb, value = variable)
+  }
+  close(pb)
+  return(new.table)
+}
+
+```
+
+## Opening files
+
+```{r}
+setwd('/share/analysis/hecatos/juantxo/Score/Interactions/')
+miRanda.table = read.table(file = 'ALLmRNAtranscripts_vs_ALLmiRNA3.parsed', 
+                           stringsAsFactors = F)
+setwd("/share/analysis/hecatos/juantxo/score_protein_analysis/UNTR/shift-FALSE")
+proteins.table = read.table('./TRC/most_correlated_proteins_trc.tsv')
+colnames(miRanda.table)[1:2] = c('miRNA.ID', 'mRNA.ID')
+head(miRanda.table)
+head(proteins.table)
+
+```
+One of the issues of our `proteins.table` is that it only contains 1 out of the 
+many transcripts that may translate to the protein of that row. Therefore, we 
+will have to look into a solution that might give us the rest of transcripts. 
+For that, we require a list with both columns: all transcripts + their proteins. 
+We do have one list like that, but its transcripts are frequently joined together in a single string:
+```{r}
+setwd('/share/analysis/hecatos/juantxo/tableomics/')
+protrans = read.csv('./uniprot-yourlist_M20190501.csv2', header = T, 
+                    stringsAsFactors = F)
+head(protrans[grep(';', protrans[, 1]), ])
+```
+
+So first we will need a better mRNA - Protein list, which can be done getting the proteins names out of the transcript names in the miRanda table.
+
+## Get protein names to unique mRNA names  
+To make it faster, it's reasonable to only search the counterpart of the transcripts that are unique, especially in a table like miRanda, where 1 transcript can have > 1 interaction:
+
+```{r}
+mrnas.unique = as.data.frame(unique(miRanda.table$mRNA.ID))
+colnames(mrnas.unique) = 'transcripts'
+```
+
+Now we can look for the corresponding proteins of that list:
+```{r}
+mrnas.unique$protein = NA
+
+pb = progressBar(min = 0, max = nrow(mrnas.unique))
+
+mrnas.notfound = 0
+
+for (i in 1:nrow(mrnas.unique)) {
+  mrna.protrans.pos = grep(pattern = mrnas.unique[i, 1], 
+                          x = protrans[, 1])
+  if (length(mrna.protrans.pos) > 0) {
+    mrnas.unique$protein[i] = protrans$Entry[mrna.protrans.pos]
+  } else {
+    mrnas.notfound = mrnas.notfound + 1
+  }
+  if (i == nrow(mrnas.unique)) {
+    print(paste('Number of mRNAs not found:', mrnas.notfound))
+  }
+  setTxtProgressBar(pb, value = i)
+}
+close(pb)
+```
+
+Having the transcript-protein table, we can now look for a list of all the transcripts related to our set of proteins
+```{r}
+trc.mrnas.table = greppend(pattern = proteins.table$protlist, 
+                           x = mrnas.unique, x.col.input = 'protein')
+```
+
+Finally, we look for the interactions of those transcripts in the miRanda file
+```{r}
+inter.trc = greppend(pattern = trc.mrnas.table[, 1], 
+                     x = miRanda.table, 
+                     x.col.input = 'mRNA.ID')
+
+```
+

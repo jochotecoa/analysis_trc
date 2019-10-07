@@ -1,0 +1,100 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+## Libraries
+
+First we will install and/or load the libraries
+
+```{r}
+list.of.packages <- c("biomaRt")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if (length(new.packages)) install.packages(new.packages)
+# setRepositories()
+
+library(biomaRt) # setRepositories() # install.packages('biomaRt')
+```
+
+## Our data
+
+In this analysis, we want to look into the curated interactions (miRTarBase) of our data, so for that we will need to open the interactions table itself and the table containing our data:
+```{r}
+setwd('/share/analysis/hecatos/juantxo/score_protein_analysis/data_extra')
+mirtarbase.table = read.csv(file = 'hsa_MTI.csv', 
+                            header = T, 
+                            stringsAsFactors = F)
+setwd("/share/analysis/hecatos/juantxo/score_protein_analysis/UNTR/shift-FALSE")
+proteins.table = read.table('./TRC/most_correlated_proteins_trc.tsv')
+```
+
+Okey, let's inspect both tables:
+
+```{r}
+head(mirtarbase.table)
+head(proteins.table)
+```
+
+### What's the issue?
+As we can see, the mirtarbase table and our data do not share any columns, so, 
+the data, as it is, cannot be analyzed.
+In this case, we will convert the UniProt IDs into its gene IDs, so that we can search those proteins in the interaction database.
+
+### Formatting our TRC data
+One of the most popular ways of "translating" identifiers in genetics is through
+Biomart. Luckily, there is a R package for it, so we do not have to leave
+our code to transform it.  
+First, we have to select which organism our data is from
+```{r}
+mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
+                     dataset = 'hsapiens_gene_ensembl') 
+
+```
+
+Later, we have to choose which kind of data are we inputting (```filters ```)
+and which format we want as output (```attributes```). Additionally, if we do
+want all genes, but a selection (as it's our case), we have to define them as 
+well (```values```)
+
+```{r}
+trc.data.Gn.UpId = getBM(attributes = c('external_gene_name',
+                                          'uniprot_gn_id'),
+                           filters = 'uniprot_gn_id',
+                           values = list(proteins.table$protlist), 
+                           mart = mart.human)
+head(trc.data.Gn.UpId)
+```
+## Data Interaction Analysis
+Now that we have our protein with a gene name, we can subset them in the 
+database list
+```{r}
+trc.rows = mirtarbase.table$Target.Gene %in% trc.data.Gn.UpId$external_gene_name
+mirtarbase.table.trc = mirtarbase.table[trc.rows, ]
+```
+Let's look at the interaction values of our data
+```{r}
+table(mirtarbase.table.trc$Support.Type)
+```
+Looks like most of our transcripts/genes have a Weak Functional MTI Support for their interaction with miRNA.  
+
+### Is that significantly different compared to most genes?  
+We can check how different are the categories distributed compared to the general population of genes. For that, we use a personal function (`tablePct`) that gives the percentage of each category found.
+```{r}
+tablePct <- function(x) {
+  x.table = table(x)
+  x.proportion = x.table / length(x)
+  x.percent = x.proportion * 100
+}
+
+trc.supptype.pct = tablePct(mirtarbase.table.trc$Support.Type) 
+mirtar.trc.supptype.pct = tablePct(mirtarbase.table$Support.Type) 
+trc.supptype.pct - mirtar.trc.supptype.pct
+
+```
+All the categories differences are below 1%. What does it mean? Are these genes as good as random? Or does it mean that they are averagedly well regulated, as they are as a gene with an average well curated miRNA regulation?
