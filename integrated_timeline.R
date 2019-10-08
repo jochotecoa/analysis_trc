@@ -2,55 +2,38 @@ library('biomaRt')
 
 #### Parameters ####
 
-level = 'ensembl_transcript_id' # ensembl_transcript_id ensembl_gene_id
+level = 'ensembl_gene_id' # ensembl_transcript_id ensembl_gene_id
 n_top = 5
 compound = 'UNTR'
 comp_id = 'Con_UNTR'
 
 #### Functions ####
-cleanProtIds = function(protein_table) {
-  protein_table = protein_table[!grepl(protein_table[, 1], pattern = ':'), ]
-  names = strsplit(as.character(protein_table[, 1]), '\\|')
-  names = as.character(lapply(names, '[', 2))
-  protein_table$uniprot_gn = names
-  return(protein_table)
+source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
+
+#### Analysis ####
+setwd('/ngs-data/data/hecatos/Cardiac/')
+setwd(comp_id)
+setwd('Protein/')
+proteomics_dir = list.dirs()[grep(pattern = 'Proteomics', list.dirs())]
+setwd(proteomics_dir)
+proteomics_file = list.files()[grep(pattern = 'renamed', list.files())]
+protein_table = read.table(proteomics_file, header = T, sep = '\t')
+protein_table = cleanProtIds(protein_table)
+protein_table[is.na(protein_table)] = 0
+
+protein_table_num = as.numeric(protein_table[, c(-1, -(ncol(protein_table)))])
+min_max_diff = NULL
+for (row in rownames(protein_table)) {
+  vector = as.numeric(protein_table[row, c(-1, -(ncol(protein_table)))])
+  min_max_vect = max(vector, T) - min(vector, T)
+  min_max_diff = rbind(min_max_diff, min_max_vect)
 }
 
-transcrToGene = function(table, aggregate = F) {
-  table[, 'rownames'] = rownames(table)
-  sampl = table[nrow(table), ]
-  enst_col = grep(pattern = 'ENST', x = sampl)[1]
-  
-  version = grepl('\\.', sampl[, enst_col])
-  if (length(version) == 0) {version = F}
-  if (version) {
-    transcript_id = 'ensembl_transcript_id_version'
-  } else {
-    transcript_id = 'ensembl_transcript_id'
-  }
-  
-  values = table[, enst_col]
-  mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
-                       dataset = 'hsapiens_gene_ensembl',
-                       host = 'http://apr2018.archive.ensembl.org') 
-  
-  new_cols = getBM(attributes = c(transcript_id, 'ensembl_gene_id'), 
-                   filters = transcript_id, values = values, mart = mart.human)
-  
-  table = merge.data.frame(x = table, y = new_cols, 
-                           by.x = colnames(table)[enst_col], 
-                           by.y = transcript_id)
-  if (aggregate) {
-    int_cols = grepl('integer', sapply(X = table[1, ], FUN = typeof))
-    int_cols = int_cols + grepl('double', sapply(X = table[1, ], 
-                                                 FUN = typeof))
-    int_cols = as.logical(int_cols)
-    table = aggregate(x = table[, int_cols], by = list(table$ensembl_gene_id), 
-                      FUN = sum)
-    colnames(table)[1] = 'ensembl_gene_id'
-  }
-  return(table)
-}
+protein_table$min_max_diff = min_max_diff
+top_diff = max(protein_table$min_max_diff, T) 
+
+top_prot = protein_table[grep(top_diff, protein_table$min_max_diff), ]
+
 
 # #### Get the most drastic miRNA change ####
 # 
@@ -81,9 +64,9 @@ transcrToGene = function(table, aggregate = F) {
 #                                      miranda.table$miRNA_id), ]
 #### How do these transcripts behave? ####
 setwd('/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/')
-setwd('V3/output/UNTR/TRCscore/')
+setwd('V3/output/TRCscore/')
 # setwd(compound)
-if (length(ls(pattern = 'untr_.\\.table')) != 2) {
+if (length(ls(pattern = 'untr_.\\.table')) == 2) {
   untr_2.table = read.table('UNTR_002_1_TRCscore.txt', stringsAsFactors = F)
   untr_8.table = read.table('UNTR_008_1_TRCscore.txt', stringsAsFactors = F)
   untr_2.table[, 'ensembl_transcript_id'] = rownames(untr_2.table)
@@ -98,11 +81,7 @@ if (level == 'ensembl_gene_id') {
 
 #### Subset by proteomics ids ####
 
-mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
-                     dataset = 'hsapiens_gene_ensembl',
-                     host = 'http://apr2018.archive.ensembl.org') 
-gene_prot = getBM(attributes = c(level, 'uniprot_gn'), 
-                  mart = mart.human)
+
 
 utr_2.subset = merge.data.frame(x = untr_2.agg, 
                                 y = gene_prot, 
@@ -112,15 +91,7 @@ utr_8.subset = merge.data.frame(x = untr_8.agg,
                                 by = level)
 
 
-setwd('/ngs-data/data/hecatos/Cardiac/')
-setwd(comp_id)
-setwd('Protein/')
-proteomics_dir = list.dirs()[grep(pattern = 'Proteomics', list.dirs())]
-setwd(proteomics_dir)
-proteomics_file = list.files()[grep(pattern = 'renamed', list.files())]
-protein_table = read.table(proteomics_file, header = T, sep = '\t')
-protein_table = cleanProtIds(protein_table)
-protein_table[is.na(protein_table)] = 0
+
 
 utr_2.subset = merge(x = utr_2.subset, y = protein_table, by = 'uniprot_gn')
 utr_8.subset = merge(x = utr_8.subset, y = protein_table, by = 'uniprot_gn')
