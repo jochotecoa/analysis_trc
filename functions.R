@@ -41,3 +41,9 @@ transcrToGene = function(table, aggregate = F) {
   }
   return(table)
 }
+
+rmMirnas = function(x) {
+  mirna.cols = grep(pattern = 'hsa', x = colnames(x))
+  y = x[, -mirna.cols]
+  return(y)
+}

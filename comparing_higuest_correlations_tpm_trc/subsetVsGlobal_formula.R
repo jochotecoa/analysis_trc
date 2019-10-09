@@ -102,18 +102,17 @@ naToZero <- function(x) {
 forceLibrary(list.of.packages = c('pbmcapply', 'ggplot2', 'biomaRt'))
 
 ################################
+setwd('/share/analysis/hecatos/juantxo/Score/output/Output_RunJUN2019_MV')
+trc_unt_002_1 = read.table('UNTR_002_1_TRCscore.txt', stringsAsFactors = F)
 
-trc_unt_002_1 = read.table('/share/analysis/hecatos/juantxo/Score/Output_RunJUN2019_MV/UNTR_002_1_TRCscore.txt',
-                           stringsAsFactors = F)
-
-setwd('/share/analysis/hecatos/juantxo/Score/Output_RunJUN2019_MV')
+setwd('/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/')
+setwd('V3/output/UNTR/TRCscore/')
 files = list.files()
-untr.files = subset(files, grepl('UNTR', files))
-untr_trc.files = subset(untr.files, grepl('TRCscore', untr.files))
+untr_trc.files = subset(files, grepl('UNTR', files))
 
 # Fuse all tables by summing rowsxcolumns in common, and appending the rest
 pb = progressBar(min = 0, max = length(untr_trc.files))
-for (f in untr_trc.files[1:2]) {
+for (f in untr_trc.files) {
   f.table = read.table(file = f, stringsAsFactors = F)
   f.table = rmStrings(f.table)
   f.table = naToZero(f.table)
@@ -145,7 +144,7 @@ for (f in untr_trc.files[1:2]) {
   i = i + 1
 }
 close(pb)
-setwd('/share/analysis/hecatos/juantxo/score_protein_analysis/UNTR/')
+setwd('/share/analysis/hecatos/juantxo/score_protein_analysis/UNTR')
 write.table('all_sum.tsv')
 
 setwd('/share/analysis/hecatos/juantxo/score_protein_analysis/UNTR/')
