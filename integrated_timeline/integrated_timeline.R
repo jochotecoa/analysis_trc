@@ -11,6 +11,7 @@ comp_id = 'Con_UNTR'
 source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
 
 #### Get the top protein ####
+# Open protein file
 setwd('/ngs-data/data/hecatos/Cardiac/')
 setwd(comp_id)
 setwd('Protein/')
@@ -18,9 +19,11 @@ proteomics_dir = list.dirs()[grep(pattern = 'Proteomics', list.dirs())]
 setwd(proteomics_dir)
 proteomics_file = list.files()[grep(pattern = 'renamed', list.files())]
 protein_table = read.table(proteomics_file, header = T, sep = '\t')
+# Clean data
 protein_table = cleanProtIds(protein_table)
 protein_table[is.na(protein_table)] = 0
 
+# Get the range of protein expressions
 protein_table_num = as.numeric(protein_table[, c(-1, -(ncol(protein_table)))])
 min_max_diff = NULL
 for (row in rownames(protein_table)) {
@@ -30,11 +33,13 @@ for (row in rownames(protein_table)) {
 }
 
 protein_table$min_max_diff = min_max_diff
+
+# Get the protein with the biggest/maximum range
 top_diff = max(protein_table$min_max_diff, T) 
 
 top_prot = protein_table[grep(top_diff, protein_table$min_max_diff), ]
 
-#### Get all the 
+#### Get TPM, TRC & miRNA parameters
 setwd("/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/")
 setwd('V3/output/UNTR/TRCscore')
 
@@ -71,6 +76,7 @@ prot_expr.cols = grep('UNTR', colnames(protein_table))
 new.cols = paste0(colnames(protein_table)[prot_expr.cols], '.protein')
 colnames(protein_table)[prot_expr.cols] = new.cols
 global.table = merge(global_gene.table, protein_table, by = 'ensembl_gene_id')
+
 # Protein expression
 top_prot_naam = top_prot$uniprot_gn
 top.all = global.table[global.table$uniprot_gn == top_prot_naam, ]
@@ -78,18 +84,21 @@ top_all.prot = top.all[, grep(x = colnames(top.all), pattern = '.protein')]
 trpl_1.prot = top_all.prot[, grep(x = colnames(top_all.prot), pattern = '_1\\.')]
 trpl_1.prot = as.data.frame(t(trpl_1.prot))
 trpl_1.prot$timepoints = as.numeric(substr(rownames(trpl_1.prot), 10, 12))
+
 # TPM expression
 top_all.tpm = top.all[, grep(x = colnames(top.all), pattern = 'targetRNA_TPM')]
 trpl_1.tpm = top_all.tpm[, grep(x = colnames(top_all.tpm), pattern = '_1_')]
 trpl_1.tpm = as.data.frame(t(trpl_1.tpm))
 ind = gregexpr(pattern = '002', text = rownames(trpl_1.tpm)[1])[[1]][1]
 trpl_1.tpm$timepoints = as.numeric(substr(rownames(trpl_1.tpm), ind, ind + 2))
+
 # TRC expression
 top_all.trc = top.all[, grep(x = colnames(top.all), pattern = 'TRC\\.')]
 trpl_1.trc = top_all.trc[, grep(x = colnames(top_all.trc), pattern = '_1_')]
 trpl_1.trc = as.data.frame(t(trpl_1.trc))
 ind = gregexpr(pattern = '002', text = rownames(trpl_1.trc)[1])[[1]][1]
 trpl_1.trc$timepoints = as.numeric(substr(rownames(trpl_1.trc), ind, ind + 2))
+
 # miRNA effect
 top_all.sp = top.all[, grep(x = colnames(top.all), pattern = 'miRNA_sum')]
 trpl_1.sp = top_all.sp[, grep(x = colnames(top_all.sp), pattern = '_1_')]
