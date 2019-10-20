@@ -6,6 +6,11 @@ cleanProtIds = function(protein_table) {
   return(protein_table)
 }
 
+naToZero = function(x) {
+  x[is.na(x)] = 0
+  return(x)
+}
+
 transcrToGene = function(table, aggregate = F) {
   table[, 'rownames'] = rownames(table)
   sampl = table[nrow(table), ]
@@ -46,4 +51,21 @@ rmMirnas = function(x) {
   mirna.cols = grep(pattern = 'hsa', x = colnames(x))
   y = x[, -mirna.cols]
   return(y)
+}
+forceLibrary <- function(list.of.packages) {
+  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
+  new.packages <- list.of.packages[new.packages.log]
+  if (length(new.packages)) {
+    install.packages(new.packages)
+  } else {
+    print('All libraries already installed')
+  }
+  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
+  new.packages <- list.of.packages[new.packages.log]
+  if (length(new.packages)) {
+    setRepositories(graphics = F, ind = 1:8)
+    install.packages(new.packages)
+  }
+  lapply(list.of.packages, library, character.only = T)
+  return(NULL)
 }
