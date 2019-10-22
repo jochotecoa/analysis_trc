@@ -41,7 +41,7 @@ transcrToGene = function(table, aggregate = F) {
                                                  FUN = typeof))
     int_cols = as.logical(int_cols)
     table = aggregate(x = table[, int_cols], by = list(table$ensembl_gene_id), 
-                      FUN = sum)
+                      FUN = sum, na.rm = T)
     colnames(table)[1] = 'ensembl_gene_id'
   }
   return(table)
@@ -68,4 +68,18 @@ forceLibrary <- function(list.of.packages) {
   }
   lapply(list.of.packages, library, character.only = T)
   return(NULL)
+}
+
+forceSetWd = function(x) {
+  if (dir.exists(x)) {
+    setwd(x)
+  } else {
+    dir.create(x)
+    if (dir.exists(x)) {
+      setwd(x)
+    } else {
+      warning(c('Warning: ', x, 
+                ' could not be created as a dir due to permission issues'))
+    }
+  }
 }
