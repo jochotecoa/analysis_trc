@@ -2,7 +2,7 @@
 source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
 
 #### Libraries ####
-forceLibrary('biomaRt')
+forceLibrary(c('biomaRt', 'dplyr'))
 
 #### Parameters ####
 
@@ -27,8 +27,9 @@ protein_table[is.na(protein_table)] = 0
 
 # Get the range of protein expressions
 protein_table_num = lapply(protein_table[, c(-1, -(ncol(protein_table)))], 
-                           as.numeric)
-protein_table_num = as.data.frame(protein_table_num)
+                           as.numeric) %>% 
+  as.data.frame()
+
 min_max_diff = NULL
 for (row in rownames(protein_table)) {
   vector = as.numeric(protein_table[row, c(-1, -(ncol(protein_table)))])
@@ -40,12 +41,13 @@ protein_table$min_max_diff = min_max_diff
 
 #### Get TPM, TRC & miRNA parameters
 setwd("/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/")
-setwd('V3/output/UNTR/TRCscore')
+setwd('V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/')
 
 trc.files = list.files(pattern = 'UNTR')
 
-first_trc.table = read.table(trc.files[1], stringsAsFactors = F)
-first_trc.table = rmMirnas(first_trc.table)
+first_trc.table = read.table(trc.files[1], stringsAsFactors = F) %>%
+  rmMirnas()
+
 colnames(first_trc.table) = paste(colnames(first_trc.table), trc.files[1], 
                                   sep = '.')
 first_trc.table[, 'ensembl_transcript_id'] = rownames(first_trc.table)
