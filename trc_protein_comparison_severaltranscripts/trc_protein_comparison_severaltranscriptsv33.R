@@ -129,7 +129,7 @@ control = T
 doses = c('The','Tox')
 timepoints = c('002', '008', '024', '072')
 triplicates = 1:3
-MITdir = '/share/analysis/hecatos/juantxo/Score/Output_Run_mrna_SEPT2019/V3/'
+MITdir = '/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/'
 organpath = '/ngs-data/data/hecatos/Cardiac'
 predictive.values.list = c('targetRNA_TPM', 'TRC') # TRC / targetRNA_TPM
 minimum_samples.list = c(3, 6, 9, 12)
@@ -186,7 +186,7 @@ prot_cod.rows = transcr_all.list$transcript_biotype == 'protein_coding'
 protrans = transcr_all.list[prot_cod.rows, -3]
 
 
-setwd('/share/analysis/hecatos/juantxo/tableomics/')
+setwd('/share/analysis/hecatos/juantxo/tableomics/enst_uniprot_tables/')
 protrans2 = read.csv(file = 'uniprot-yourlist_M20190501.csv2',
                     header = T,
                     stringsAsFactors = F)
@@ -234,7 +234,11 @@ for (is.shift in is.shift.list) {
             # Get the TRC value for each sample
             for (s in samples) {
               setwd(MITdir)
-              samplefilepath = paste0(comp,'_',s, '_TRCscore.txt') 
+              files = list.files()
+              samplefilepath = files[grep(pattern = s, x = files)]
+              if (length(samplefilepath) == 0) {
+                samplefilepath = paste0(comp,'_',s, '_TRCscore.txt')
+              }
               if (file.exists(samplefilepath)) {
                 if (length(grep(pattern = s, x = ls())) > 0) {
                   TRCscorefile = get(s)

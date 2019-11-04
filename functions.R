@@ -12,6 +12,7 @@ naToZero = function(x) {
 }
 
 transcrToGene = function(table, aggregate = F) {
+  library('biomaRt')
   table[, 'rownames'] = rownames(table)
   sampl = table[nrow(table), ]
   enst_col = grep(pattern = 'ENST', x = sampl)[1]
@@ -53,21 +54,32 @@ rmMirnas = function(x) {
   return(y)
 }
 forceLibrary <- function(list.of.packages) {
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
-  if (length(new.packages)) {
-    install.packages(new.packages)
-  } else {
-    print('All libraries already installed')
+  checkNewPackages <- function(list.of.packages) {
+    new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
+    new.packages <- list.of.packages[new.packages.log]
+    return(new.packages)
   }
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
+  new.packages = checkNewPackages(list.of.packages)
   if (length(new.packages)) {
-    setRepositories(graphics = F, ind = 1:8)
+    print(paste('Trying to install the following packages:', new.packages))
     install.packages(new.packages)
-  }
+    new.packages = checkNewPackages(list.of.packages)
+    if (length(new.packages)) {
+      print(paste(new.packages, 'were not installed through the easy way'))
+      print("Let's try the hard way then")
+      setRepositories(graphics = F, ind = 1:8)
+      install.packages(new.packages)
+      new.packages = checkNewPackages(list.of.packages)
+      if (length(new.packages)) {
+        stop('forceLibrary was not able to install the following packages: ', 
+             new.packages)
+      }
+    }
+  } 
+  
   lapply(list.of.packages, library, character.only = T)
-  return(NULL)
+  
+  print(NULL)
 }
 
 forceSetWd = function(x) {
@@ -82,4 +94,32 @@ forceSetWd = function(x) {
                 ' could not be created as a dir due to permission issues'))
     }
   }
+}
+
+getSalmonCols = function(cols =  NULL, salfiles = '/quant.sf') {
+  samples = list.dirs(recursive = F)
+  filename = paste0(samples[1], salfiles)
+  rna = read.table(filename, header = T)
+  if (is.null(cols)) {
+    cols = 1:ncol(rna)
+  } else {
+    cols = grep(cols, colnames(rna))
+  }
+  rna_num = data.frame(rna[, cols])
+  rownames(rna_num) = rownames(rna)
+  colnames(rna_num)[ncol(rna_num)] = paste0(colnames(rna_num)[ncol(rna_num)], samples[1])
+  for (sample in samples[-1]) {
+    filename = paste0(sample, '/quant.sf')
+    rna = read.table(filename, header = T)
+    rna_num = cbind(rna_num, rna[, cols])
+    colnames(rna_num)[ncol(rna_num)] = paste0(colnames(rna_num)[ncol(rna_num)], sample)
+  }
+  return(rna_num)
+} 
+
+openMart2018 <- function(variables) {
+  library(biomaRt)
+  mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
+                       dataset = 'hsapiens_gene_ensembl',
+                       host = 'http://apr2018.archive.ensembl.org') 
 }
