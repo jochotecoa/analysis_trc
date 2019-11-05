@@ -96,26 +96,27 @@ forceSetWd = function(x) {
   }
 }
 
-getSalmonCols = function(cols =  NULL, salfiles = '/quant.sf') {
-  samples = list.dirs(recursive = F)
-  filename = paste0(samples[1], salfiles)
-  rna = read.table(filename, header = T)
-  if (is.null(cols)) {
-    cols = 1:ncol(rna)
-  } else {
-    cols = grep(cols, colnames(rna))
+getSalmonCols = function(cols =  NULL, salfiles = 'quant.sf') {
+  forceLibrary('pbmcapply')
+  samples = list.files(pattern = salfiles, recursive = T)
+  x = read.table(samples[1], header = T) 
+  colnames(file)[-1] = paste0(colnames(file)[-1], '.', samples[1])
+  y = read.table(samples[2], header = T)
+  colnames(file)[-1] = paste0(colnames(file)[-1], '.', samples[2])
+  
+  z = merge.data.frame(x = x, y = y, by = 'Name')
+  zz = z
+  pb = progressBar(max = length(samples[-(1:2)]))
+  for (sample in samples[-(1:2)]) {
+    file = read.table(sample, header = T)
+    colnames(file)[-1] = paste0(colnames(file)[-1], '.', sample)
+    zz = merge.data.frame(zz, file, by = "Name")
+    setTxtProgressBar(pb, grep(sample_x, samples[-(1:2)]))
   }
-  rna_num = data.frame(rna[, cols])
-  rownames(rna_num) = rownames(rna)
-  colnames(rna_num)[ncol(rna_num)] = paste0(colnames(rna_num)[ncol(rna_num)], samples[1])
-  for (sample in samples[-1]) {
-    filename = paste0(sample, '/quant.sf')
-    rna = read.table(filename, header = T)
-    rna_num = cbind(rna_num, rna[, cols])
-    colnames(rna_num)[ncol(rna_num)] = paste0(colnames(rna_num)[ncol(rna_num)], sample)
-  }
-  return(rna_num)
-} 
+  close(pb)
+  return(zz)
+  
+  } 
 
 openMart2018 <- function(variables) {
   library(biomaRt)
