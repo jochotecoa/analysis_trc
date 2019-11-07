@@ -10,7 +10,10 @@ level = 'ensembl_gene_id' # ensembl_transcript_id ensembl_gene_id
 n_top_prot = 3
 compound = 'UNTR'
 comp_id = 'Con_UNTR'
-
+# setwd("/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/")
+# setwd('V3/output/UNTR/')
+# list.dirs(recursive = F)
+output.file = 5
 
 #### Get the top protein ####
 # Open protein file
@@ -41,7 +44,9 @@ protein_table$min_max_diff = min_max_diff
 
 #### Get TPM, TRC & miRNA parameters
 setwd("/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/")
-setwd('V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/')
+setwd('V3/output/UNTR/')
+setwd(list.dirs(recursive = F)[output.file])
+setwd('TRCscore/')
 
 trc.files = list.files(pattern = 'UNTR')
 

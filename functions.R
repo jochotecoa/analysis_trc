@@ -96,27 +96,25 @@ forceSetWd = function(x) {
   }
 }
 
-getSalmonCols = function(cols =  NULL, salfiles = 'quant.sf') {
+getSalmonCols = function(files_patt =  'quant.sf') {
   forceLibrary('pbmcapply')
-  samples = list.files(pattern = salfiles, recursive = T)
-  x = read.table(samples[1], header = T) 
-  colnames(file)[-1] = paste0(colnames(file)[-1], '.', samples[1])
-  y = read.table(samples[2], header = T)
-  colnames(file)[-1] = paste0(colnames(file)[-1], '.', samples[2])
+  files = list.files(pattern = files_patt, recursive = T)
+  # files = files[-1]
   
-  z = merge.data.frame(x = x, y = y, by = 'Name')
-  zz = z
-  pb = progressBar(max = length(samples[-(1:2)]))
-  for (sample in samples[-(1:2)]) {
-    file = read.table(sample, header = T)
-    colnames(file)[-1] = paste0(colnames(file)[-1], '.', sample)
-    zz = merge.data.frame(zz, file, by = "Name")
-    setTxtProgressBar(pb, grep(sample_x, samples[-(1:2)]))
+  file = files[1]
+  voom_file = read.table(file, header = T, stringsAsFactors = F)
+  colnames(voom_file)[-1] = paste(colnames(voom_file)[-1], file, sep = '_')
+  big_quant_voom = voom_file
+  pb = progressBar(max = length(files[-1]))
+  for (file in files[-1]) {
+    voom_file = read.table(file, header = T, stringsAsFactors = F)
+    colnames(voom_file)[-1] = paste(colnames(voom_file)[-1], file, sep = '_')
+    big_quant_voom = merge.data.frame(big_quant_voom, voom_file, by = 'Name')
+    setTxtProgressBar(pb, grep(file, files[-1]))
   }
   close(pb)
-  return(zz)
-  
-  } 
+  return(big_quant_voom)
+} 
 
 openMart2018 <- function(variables) {
   library(biomaRt)
