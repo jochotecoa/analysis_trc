@@ -13,9 +13,13 @@ naToZero = function(x) {
 
 transcrToGene = function(table, aggregate = F) {
   library('biomaRt')
-  table[, 'rownames'] = rownames(table)
+  
   sampl = table[nrow(table), ]
   enst_col = grep(pattern = 'ENST', x = sampl)[1]
+  if (length(enst_col) == 0) {
+    table[, 'rownames'] = rownames(table)
+    enst_col = grep(pattern = 'ENST', x = sampl)[1]
+  }
   
   version = grepl('\\.', sampl[, enst_col])
   if (length(version) == 0) {version = F}
@@ -79,7 +83,7 @@ forceLibrary <- function(list.of.packages) {
   
   lapply(list.of.packages, library, character.only = T)
   
-  print(NULL)
+  invisible()
 }
 
 forceSetWd = function(x) {
@@ -96,20 +100,32 @@ forceSetWd = function(x) {
   }
 }
 
-getSalmonCols = function(files_patt =  'quant.sf') {
-  forceLibrary('pbmcapply')
-  files = list.files(pattern = files_patt, recursive = T)
-  # files = files[-1]
+mergeFiles = function(files_patt =  'quant.sf', by_col = 'Name', row_names = F, ...) {
   
+  forceLibrary(c('pbmcapply', 'dplyr'))
+  files = list.files(pattern = files_patt, recursive = T)
+  files = files[!grepl('total', files)]
+  # files = files[-1]
+  print(paste('Number of files found:', length(files)))
   file = files[1]
+  stopifnot(file.exists(file))
   voom_file = read.table(file, header = T, stringsAsFactors = F)
+  if (row_names) {
+    voom_file = voom_file %>% tibble::rownames_to_column() %>% 
+      dplyr::select(rowname, everything())
+    by_col = 'rowname'
+  }
   colnames(voom_file)[-1] = paste(colnames(voom_file)[-1], file, sep = '_')
   big_quant_voom = voom_file
   pb = progressBar(max = length(files[-1]))
   for (file in files[-1]) {
     voom_file = read.table(file, header = T, stringsAsFactors = F)
+    if (row_names) {
+      voom_file = voom_file %>% tibble::rownames_to_column() %>% 
+        dplyr::select(rowname, everything())
+    }
     colnames(voom_file)[-1] = paste(colnames(voom_file)[-1], file, sep = '_')
-    big_quant_voom = merge.data.frame(big_quant_voom, voom_file, by = 'Name')
+    big_quant_voom = merge.data.frame(big_quant_voom, voom_file, by = by_col, ...)
     setTxtProgressBar(pb, grep(file, files[-1]))
   }
   close(pb)
