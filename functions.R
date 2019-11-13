@@ -132,9 +132,9 @@ mergeFiles = function(files_patt =  'quant.sf', by_col = 'Name', row_names = F, 
   return(big_quant_voom)
 } 
 
-openMart2018 <- function(variables) {
+openMart2018 <- function(...) {
   library(biomaRt)
   mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
                        dataset = 'hsapiens_gene_ensembl',
-                       host = 'http://apr2018.archive.ensembl.org') 
+                       host = 'http://apr2018.archive.ensembl.org', ...) 
 }
