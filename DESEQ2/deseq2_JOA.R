@@ -1,20 +1,49 @@
 source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
-forceLibrary(c('biomaRt', "tximport"))
+forceLibrary(c('biomaRt', "tximport", "dplyr", "DESeq2", "grid", "ggplot2", "pheatmap"))
 
-project_name = 'voom_TRC'
+project_name = 'protein' # Salmon_counts TRC_no_voom
+# transcript_id = 'ensembl_transcript_id'
+if (grepl('TRC', project_name)) {
+  setwd('/share/analysis/hecatos/juantxo/Score/output/UNTR')
+  transcript_id = 'ensembl_transcript_id'
+  col_quant = 'TRC_'
+  if (grepl('no_voom', project_name)) {
+    setwd('2019-11-11_12:04:38_UTC/')
+  } else {
+    setwd('2019-11-11_09:41:21_UTC/')
+  }
+  quant_file = mergeFiles(files_patt = 'TRCscore', row_names = T, all = T)
+}
+if (grepl('Salmon', project_name)) {
+  transcript_id = 'ensembl_transcript_id_version'
+  setwd('/share/analysis/hecatos/juantxo/Score/input/RNA_Salmon/UNTR/')
+  if (grepl('counts', project_name)) {
+    col_quant = 'NumReads'
+  } else {
+    col_quant = 'TPM'
+  }
+  quant_file = mergeFiles(files_patt = 'quant.sf', by_col = 'Name', all = T)
+}
+source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
+setwd('/ngs-data/data/hecatos/Cardiac/Con_UNTR/Protein/Proteomics_Analyses_Cardiac_UNTR_GeneData/')
+prot = read.table('Hecatos_Cardiac_Px_Untreated_pre-processed_renamed.txt', header = T, sep = '\t', row.names = 1)
+prot_num = apply(prot, MARGIN = 2, as.numeric) %>% .[, 1:12]
+rownames(prot_num) = rownames(prot)
+quant_file_counts = na.omit(prot_num)
 
-setwd('/share/analysis/hecatos/juantxo/Score/output/UNTR/2019-11-11_09:41:21_UTC/')
-quant_file = mergeFiles(files_patt = 'TRCscore', row_names = T, all = T)
-mart = openMart2018()
-tx2gene = getBM(attributes = c('ensembl_transcript_id', 'ensembl_gene_id'), 
-                filters = 'ensembl_transcript_id', values = quant_file[, 1], 
-                mart = mart)
-nrow(tx2gene) %>% all(. > 0) %>% stopifnot()
-quant_file_genes = merge.data.frame(quant_file, tx2gene, by.x = colnames(quant_file)[1], by.y = 'ensembl_transcript_id')
-quant_file_counts = quant_file_genes %>% dplyr::select(contains('TRC_'))
-cts = sapply(quant_file_counts, round, USE.NAMES = T) %>% as.data.frame()
+
+# quant_file = quant_file %>% filter(grepl(quant_file[, 1], pattern = 'ENST'))
+# mart = openMart2018()
+# tx2gene = getBM(attributes = c(transcript_id, 'ensembl_gene_id'), #ensembl_transcript_id_version
+#                 filters = transcript_id, values = quant_file[, 1],
+#                 mart = mart)
+# nrow(tx2gene) %>% all(. > 0) %>% stopifnot()
+# quant_file_genes = merge.data.frame(quant_file, tx2gene, by.x = colnames(quant_file)[1], by.y = transcript_id)
+# quant_file_counts = quant_file_genes  %>% dplyr::select(contains(col_quant))
+cts = apply(quant_file_counts, 2, round) %>% as.data.frame()
 # cts$ensembl_gene_id = salmon_genes$ensembl_gene_id
-cts = aggregate.data.frame(x = cts, by = list(quant_file_genes$ensembl_gene_id), FUN = sum, na.rm = T) %>% tibble::column_to_rownames(var = 'Group.1')
+# cts = aggregate.data.frame(x = cts, by = list(quant_file_genes$ensembl_gene_id), FUN = sum, na.rm = T) %>% 
+#   tibble::column_to_rownames(var = 'Group.1')
 
 timepoints = NULL
 for (tp in c('UNTR_002', 'UNTR_008','UNTR_024', 'UNTR_072')) {
@@ -47,8 +76,8 @@ norm_data <- counts(dds,normalized=TRUE)
 # norm_data_name <- norm_data_name[,-1]
 
 norm_read_count <- colSums(norm_data)
-barplot(norm_read_count, las=2, cex.names=0.6)
-barplot(log2(norm_read_count), las=2, cex.names=0.6)
+# barplot(norm_read_count, las=2, cex.names=0.6)
+# barplot(log2(norm_read_count), las=2, cex.names=0.6)
 
 ## Set the pvalue to 0.05
 # res <- results(dds, alpha=0.05, contrast=c("status", "Response" , "No_response"))
@@ -56,20 +85,30 @@ barplot(log2(norm_read_count), las=2, cex.names=0.6)
 
 # perform a PCA plot. You can change the condition assessed by the pca plot by changing the value between [] from 1 to 3 (corresponding to the column number of the metadata file)
 rld <- vst(dds)
-plotPCA(rld, intgroup = names(colData(dds)))
-setwd("/share/script/hecatos/juantxo/analysis_trc/DESEQ2")
+pca = plotPCA(rld, intgroup = names(colData(dds)))
+setwd("/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/")
 forceSetWd(project_name)
-ggsave(filename="localisation.png", device = "png")
+ggsave(filename="localisation.png", device = "png", plot = pca)
 
 ## extract the differentially expressed genes passing FDR multiple testing
 DEmRNA_fdr <-  subset(res,res$padj < 0.05)
 DEmRNA_fdr <- DEmRNA_fdr[order(DEmRNA_fdr$padj),]
 
-print(paste("there is",nrow(DEmRNA_fdr), "gene(s) passing FDR correction"))
+print(paste("There are",nrow(DEmRNA_fdr), "gene(s) passing FDR correction"))
 
+res <- results(dds, name = resultsNames(dds)[2])
+DEmRNA_fdr = data.frame(ensembl_gene_id = rownames(res), res$padj < 0.05)
+colnames(DEmRNA_fdr)[2] = resultsNames(dds)[2]
+for (name in resultsNames(dds)[-(1:2)]) {
+  res <- results(dds, name = name)
+  DEmRNA_fdr_tmp = data.frame(ensembl_gene_id = rownames(res), res$padj < 0.05)
+  colnames(DEmRNA_fdr_tmp)[2] = name
+  DEmRNA_fdr = merge.data.frame(DEmRNA_fdr, DEmRNA_fdr_tmp, by = 'ensembl_gene_id')
+}
+  
 DEmRNA_all <-  subset(res,res$pvalue < 0.05)
 
-print(paste("there is",nrow(DEmRNA_all), "gene(s) have a pvalue < 0.05"))
+print(paste("There are",nrow(DEmRNA_all), "gene(s) that have a pvalue < 0.05"))
 
 # save the normalized count table: 
 write.table(norm_data,file="batch2_norm_counts.txt", sep="\t", quote=FALSE)
@@ -78,16 +117,16 @@ write.table(norm_data,file="batch2_norm_counts.txt", sep="\t", quote=FALSE)
 write.table(res,file="batch2_DE_Analysis.txt", sep="\t", quote=FALSE)
 
 # save the pvalue and fdr corrected value for each gene: 
-write(rownames(DEmRNA_fdr),file="list_DEGs.txt")
+write.table(DEmRNA_fdr, file="list_DEGs.txt", )
 
 # perform a heat Map:
 #norm_data_heatmap <- subset(norm_data_name, rownames(norm_data_name) %in% rownames(DEmRNA_fdr)[1:100])
 #pheatmap(log2(norm_data_heatmap+0.1), show_rownames=FALSE)            
 
-norm_data_heatmap <- subset(norm_data, rownames(norm_data) %in% rownames(DEmRNA_fdr)[1:100]) %>% as.data.frame()
-rownames(norm_data_heatmap) <- subset(rownames(norm_data), rownames(norm_data) %in% rownames(DEmRNA_fdr)[1:100])
-pheatmap(log2(norm_data_heatmap[,1:ncol(norm_data_heatmap)-1]+1), show_rownames=TRUE,labels_row=norm_data_heatmap$gene_name, cellwidth=30 , cellheight= 6.5 , fontsize= 7)
-ggsave('heatmap_DEGs.png')
+# norm_data_heatmap <- subset(norm_data, rownames(norm_data) %in% rownames(DEmRNA_fdr)[1:100]) %>% as.data.frame()
+# rownames(norm_data_heatmap) <- subset(rownames(norm_data), rownames(norm_data) %in% rownames(DEmRNA_fdr)[1:100])
+# phm = pheatmap(log2(norm_data_heatmap[,1:ncol(norm_data_heatmap)-1]+1), show_rownames=TRUE,labels_row=norm_data_heatmap$gene_name, cellwidth=30 , cellheight= 6.5 , fontsize= 7)
+# ggsave('heatmap_DEGs.png', plot = phm)
 
 # Look for the normalized read count of a gene. You can freely change the ensembl ID to plot your gene of interest
 # gene_to_plot <- "ENSG00000091831"

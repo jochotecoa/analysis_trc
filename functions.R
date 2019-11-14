@@ -1,5 +1,8 @@
 cleanProtIds = function(protein_table) {
   protein_table = protein_table[!grepl(protein_table[, 1], pattern = ':'), ]
+  if (class(protein_table) != "data.frame") {
+    protein_table = as.data.frame(protein_table)
+  }
   names = strsplit(as.character(protein_table[, 1]), '\\|')
   names = as.character(lapply(names, '[', 2))
   protein_table$uniprot_gn = names
