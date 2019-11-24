@@ -1,3 +1,32 @@
+forceLibrary <- function(list.of.packages) {
+  checkNewPackages <- function(list.of.packages) {
+    new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
+    new.packages <- list.of.packages[new.packages.log]
+    return(new.packages)
+  }
+  new.packages = checkNewPackages(list.of.packages)
+  if (length(new.packages)) {
+    print(paste('Trying to install the following packages:', paste(new.packages)))
+    install.packages(new.packages)
+    new.packages = checkNewPackages(list.of.packages)
+    if (length(new.packages)) {
+      print(paste(paste(new.packages), 'were not installed through the easy way'))
+      print("Let's try the hard way then")
+      setRepositories(graphics = F, ind = 1:8)
+      install.packages(new.packages)
+      new.packages = checkNewPackages(list.of.packages)
+      if (length(new.packages)) {
+        stop('forceLibrary was not able to install the following packages: ', 
+             paste(new.packages))
+      }
+    }
+  } 
+  
+  lapply(list.of.packages, library, character.only = T)
+  
+  invisible()
+}
+
 cleanProtIds = function(protein_table) {
   protein_table = protein_table[!grepl(protein_table[, 1], pattern = ':'), ]
   if (class(protein_table) != "data.frame") {
@@ -15,7 +44,7 @@ naToZero = function(x) {
 }
 
 transcrToGene = function(table, aggregate = F) {
-  library('biomaRt')
+  forceLibrary('biomaRt')
   
   sampl = table[nrow(table), ]
   enst_col = grep(pattern = 'ENST', x = sampl)[1]
@@ -59,34 +88,6 @@ rmMirnas = function(x) {
   mirna.cols = grep(pattern = 'hsa', x = colnames(x))
   y = x[, -mirna.cols]
   return(y)
-}
-forceLibrary <- function(list.of.packages) {
-  checkNewPackages <- function(list.of.packages) {
-    new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-    new.packages <- list.of.packages[new.packages.log]
-    return(new.packages)
-  }
-  new.packages = checkNewPackages(list.of.packages)
-  if (length(new.packages)) {
-    print(paste('Trying to install the following packages:', new.packages))
-    install.packages(new.packages)
-    new.packages = checkNewPackages(list.of.packages)
-    if (length(new.packages)) {
-      print(paste(new.packages, 'were not installed through the easy way'))
-      print("Let's try the hard way then")
-      setRepositories(graphics = F, ind = 1:8)
-      install.packages(new.packages)
-      new.packages = checkNewPackages(list.of.packages)
-      if (length(new.packages)) {
-        stop('forceLibrary was not able to install the following packages: ', 
-             new.packages)
-      }
-    }
-  } 
-  
-  lapply(list.of.packages, library, character.only = T)
-  
-  invisible()
 }
 
 forceSetWd = function(x) {
@@ -136,7 +137,7 @@ mergeFiles = function(files_patt =  'quant.sf', by_col = 'Name', row_names = F, 
 } 
 
 openMart2018 <- function(...) {
-  library(biomaRt)
+  forceLibrary('biomaRt')
   mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
                        dataset = 'hsapiens_gene_ensembl',
                        host = 'http://apr2018.archive.ensembl.org', ...) 
