@@ -9,6 +9,11 @@ getCts <- function(project_name) {
     setwd('/share/analysis/hecatos/juantxo/Score/output/UNTR')
     transcript_id = 'ensembl_transcript_id'
     col_quant = 'TRC_'
+    if (grepl('counts', project_name)) {
+      setwd('/share/analysis/hecatos/juantxo/Score/analysis/TRC_counts/')
+      quant_file = read.table(
+        'counts_TRC_UNTR_2019-11-11_12:04:38_UTC.tsv', header = T)
+    }
     if (grepl('voom', project_name)) {
       setwd('2019-11-11_09:41:21_UTC/')
     } else {
@@ -42,6 +47,14 @@ getCts <- function(project_name) {
     quant_file = quant_file %>% 
       filter(grepl(quant_file[, 1], pattern = 'ENST'))
     mart = openMart2018()
+    transcr_biotypes = getBM(attributes = c(transcript_id, 'transcript_biotype'), 
+                             filters = transcript_id, values = quant_file[, 1], 
+                             mart = mart)
+    isProtCod = transcr_biotypes$transcript_biotype == 'protein_coding'
+    transcr_biotypes = transcr_biotypes[isProtCod, 1, drop = F]
+    quant_file = merge.data.frame(quant_file, transcr_biotypes, 
+                                        by.x = colnames(quant_file)[1], 
+                                        by.y = transcript_id)
     tx2gene = getBM(attributes = c(transcript_id, 'ensembl_gene_id'), 
                     filters = transcript_id, values = quant_file[, 1],
                     mart = mart)

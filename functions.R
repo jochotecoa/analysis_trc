@@ -43,7 +43,7 @@ naToZero = function(x) {
   return(x)
 }
 
-transcrToGene = function(table, aggregate = F) {
+transcrToGene = function(table, aggregate = F, prot_cod = F) {
   forceLibrary('biomaRt')
   
   sampl = table[nrow(table), ]
@@ -65,6 +65,14 @@ transcrToGene = function(table, aggregate = F) {
   mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
                        dataset = 'hsapiens_gene_ensembl',
                        host = 'http://apr2018.archive.ensembl.org') 
+  if (prot_cod) {
+    transcr_biotypes = getBM(attributes = c(transcript_id, 'transcript_biotype'), 
+                             filters = transcript_id, values = values, 
+                             mart = mart.human)
+    isProtCod = transcr_biotypes$transcript_biotype == 'protein_coding'
+    values = values[isProtCod]
+    print(paste0(sum(!isProtCod), ' transcripts were not protein_coding'))
+  }
   
   new_cols = getBM(attributes = c(transcript_id, 'ensembl_gene_id'), 
                    filters = transcript_id, values = values, mart = mart.human)
@@ -72,6 +80,10 @@ transcrToGene = function(table, aggregate = F) {
   table = merge.data.frame(x = table, y = new_cols, 
                            by.x = colnames(table)[enst_col], 
                            by.y = transcript_id)
+  if (nrow(table) < length(values)) {
+    print(paste0(length(values) - nrow(table), 
+                 ' transcripts had no gene matched'))
+    }
   if (aggregate) {
     int_cols = grepl('integer', sapply(X = table[1, ], FUN = typeof))
     int_cols = int_cols + grepl('double', sapply(X = table[1, ], 

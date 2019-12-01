@@ -2,11 +2,16 @@ source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
 
 setwd('/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/')
 
-forceLibrary('VennDiagram')
+forceLibrary(c('VennDiagram', 'dplyr'))
 
-counts_DEGs_deseq2 = read.table('/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/Salmon_counts/list_DEGs.txt') 
-TPM_DEGs_deseq2 = read.table('/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/Salmon_TPM_nofilt/list_DEGs.txt')
-TRC_DEGs_deseq2 = read.table('/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/TRC_nofilt/list_DEGs.txt') 
+counts_DEGs_deseq2 = read.table(
+  '/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/Salmon_counts/list_DEGs.txt') 
+TPM_DEGs_deseq2 = read.table(
+  '/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/Salmon_TPM_nofilt/list_DEGs.txt')
+TRC_DEGs_deseq2 = read.table(
+  '/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/TRC_nofilt/list_DEGs.txt') 
+TRC_counts_DEGs_deseq2 = read.table(
+  '/share/analysis/hecatos/juantxo/Score/analysis/DESeq2/TRC_counts/list_DEGs.txt')
 
 TRC_DEGs_edgeR = read.table('/share/analysis/hecatos/juantxo/Score/analysis/edgeR/TRC_nofilt/DEG_table_BH_timepointUNTR_008_glm_.tsv')
 TPM_DEGs_edgeR = read.table('/share/analysis/hecatos/juantxo/Score/analysis/edgeR/Salmon_TPM/DEG_table_BH_timepointUNTR_008_glm_.tsv')
@@ -15,32 +20,38 @@ TPM_DEGs_edgeR = read.table('/share/analysis/hecatos/juantxo/Score/analysis/edge
 counts_DEGs_deseq2[is.na.data.frame(counts_DEGs_deseq2)] = F
 TPM_DEGs_deseq2[is.na.data.frame(TPM_DEGs_deseq2)] = F
 TRC_DEGs_deseq2[is.na.data.frame(TRC_DEGs_deseq2)] = F
+TRC_counts_DEGs_deseq2[is.na.data.frame(TRC_counts_DEGs_deseq2)] = F
 
 counts_DEGs_deseq2_2_8 = counts_DEGs_deseq2 %>% 
-  select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
+  dplyr::select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
   filter(timepoints_UNTR_008_vs_UNTR_002) %>%
-  select(-timepoints_UNTR_008_vs_UNTR_002)
+   dplyr::select(-timepoints_UNTR_008_vs_UNTR_002)
+
+TRC_counts_DEGs_deseq2_2_8 = TRC_counts_DEGs_deseq2 %>%
+  dplyr::select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
+  filter(timepoints_UNTR_008_vs_UNTR_002) %>%
+  dplyr::select(-timepoints_UNTR_008_vs_UNTR_002)
 
 TPM_DEGs_deseq2_2_8 = TPM_DEGs_deseq2 %>% 
-  select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
+   dplyr::select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
   filter(timepoints_UNTR_008_vs_UNTR_002) %>%
-  select(-timepoints_UNTR_008_vs_UNTR_002)
+   dplyr::select(-timepoints_UNTR_008_vs_UNTR_002)
 
 TRC_DEGs_deseq2_2_8 = TRC_DEGs_deseq2 %>%
-  select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
+   dplyr::select(ensembl_gene_id, timepoints_UNTR_008_vs_UNTR_002) %>% 
   filter(timepoints_UNTR_008_vs_UNTR_002) %>%
-  select(-timepoints_UNTR_008_vs_UNTR_002)
+   dplyr::select(-timepoints_UNTR_008_vs_UNTR_002)
 
 
 TRC_DEGs_edgeR_2_8 = TRC_DEGs_edgeR %>%
   rownames_to_column() %>%
   filter(PValue < 0.05) %>%
-  select(rowname)
+   dplyr::select(rowname)
 
 TPM_DEGs_edgeR_2_8 = TPM_DEGs_edgeR %>%
   rownames_to_column() %>%
   filter(PValue < 0.05) %>%
-  dplyr::select(rowname)
+  dplyr:: dplyr::select(rowname)
 
 
 # mart = openMart2018()
@@ -49,7 +60,7 @@ TPM_DEGs_edgeR_2_8 = TPM_DEGs_edgeR %>%
 #                     values = counts, mart = mart)
 
 proteins_DEPs = read.table('/share/analysis/hecatos/juantxo/Score/analysis/DEPs/UNTR_protein_log2_pvalues.tsv') %>%
-  rownames_to_column() %>% mutate(uniprot_gn = rowname)
+  tibble::rownames_to_column() %>% mutate(uniprot_gn = rowname)
 
 
 # proteins_DEPs_uniprot = cleanProtIds(proteins_DEPs)
@@ -63,20 +74,17 @@ proteins_DEGs_2_8 = proteins_DEGs %>%
   filter(p.value_UNTR_The_008_1 < 0.05) %>%
   dplyr::select(ensembl_gene_id)
   
-proteins_DEGs = proteins_DEGs %>% 
 proteins_DEGs[is.na.data.frame(proteins_DEGs)] = F
 # lis = list(proteins_DEGs$ensembl_gene_id, counts_DEGs_deseq2$V1, TPM_DEGs_deseq2$V1, TRC_DEGs_edgeR$V1, TRC_DEGs_deseq2$V1)
 # 
 # sapply(lis, length)
 
-venn.diagram(x = list(#counts_DEGs_deseq2_2_8$ensembl_gene_id, 
-                      TPM_DEGs_deseq2_2_8$ensembl_gene_id, 
-                      TRC_DEGs_edgeR_2_8$rowname,
-                      TRC_DEGs_deseq2_2_8$ensembl_gene_id,
-                      TPM_DEGs_edgeR_2_8$rowname,
+venn.diagram(x = list(counts_DEGs_deseq2_2_8$ensembl_gene_id, 
+                      #TPM_DEGs_deseq2_2_8$ensembl_gene_id, 
+                      TRC_counts_DEGs_deseq2_2_8$ensembl_gene_id,
                       proteins_DEGs_2_8$ensembl_gene_id),
-             filename = 'TRCvsTPM_DESeq2vsEdgeR_RNAvsProt.png', imagetype = 'png', 
-             category.names = c('TPM_DESeq2', 'TRC_DESeq2', 'TRC_edgeR', 'TPM_edgeR', 'Protein_DEGs'), 
+             filename = 'TRC_counts_DESeq2vsCounts_DESeq2vsProt.png', imagetype = 'png', 
+             category.names = c('Counts_DESeq2', 'TRC_counts_DESeq2', 'Protein_DEGs'), 
              width = 3000)
 
 
@@ -111,8 +119,8 @@ DEGs = c(nrow(counts_DEGs_deseq2_2_8),
   mutate(names = c('Counts_DESeq2', 
                    'TPM_DESeq2', 
                    'TRC_DESeq2', 
-                   'TRC_edgeR', 
                    'TPM_edgeR', 
+                   'TRC_edgeR', 
                    'Protein_DEGs'))
 
 ggplot(DEGs, aes(names, n_DEGs)) + 
