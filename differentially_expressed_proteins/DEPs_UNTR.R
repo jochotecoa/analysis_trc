@@ -14,7 +14,7 @@ prot_log = prot_file %>% log2()
 # Get the median of medians
 expressed <- apply(prot_log, 1, function(r) all(!is.na(r)))
 median_of_medians = prot_log[expressed, ] %>%
-  apply(1, median, na.rm = T) %>%
+  apply(2, median, na.rm = T) %>%
   median()
 
 # timepoints with only 1 NA will be subst by the average of the 2 others

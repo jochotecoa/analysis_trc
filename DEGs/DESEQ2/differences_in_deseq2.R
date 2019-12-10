@@ -51,7 +51,7 @@ TRC_DEGs_edgeR_2_8 = TRC_DEGs_edgeR %>%
 TPM_DEGs_edgeR_2_8 = TPM_DEGs_edgeR %>%
   rownames_to_column() %>%
   filter(PValue < 0.05) %>%
-  dplyr:: dplyr::select(rowname)
+  dplyr::select(rowname)
 
 
 # mart = openMart2018()
@@ -79,12 +79,12 @@ proteins_DEGs[is.na.data.frame(proteins_DEGs)] = F
 # 
 # sapply(lis, length)
 
-venn.diagram(x = list(counts_DEGs_deseq2_2_8$ensembl_gene_id, 
-                      #TPM_DEGs_deseq2_2_8$ensembl_gene_id, 
-                      TRC_counts_DEGs_deseq2_2_8$ensembl_gene_id,
-                      proteins_DEGs_2_8$ensembl_gene_id),
-             filename = 'TRC_counts_DESeq2vsCounts_DESeq2vsProt.png', imagetype = 'png', 
-             category.names = c('Counts_DESeq2', 'TRC_counts_DESeq2', 'Protein_DEGs'), 
+venn.diagram(x = list(TPM_DEGs_deseq2_2_8$ensembl_gene_id, 
+                      TRC_DEGs_deseq2_2_8$ensembl_gene_id,
+                      TPM_DEGs_edgeR_2_8$rowname,
+                      TRC_DEGs_edgeR_2_8$rowname),
+             filename = 'TPMvsTRC&DESeq2vsedgeR.png', imagetype = 'png', 
+             category.names = c('TPM_DESeq2', 'TRC_DESeq2', 'TPM_edgeR', 'TRC_edgeR'), 
              width = 3000)
 
 

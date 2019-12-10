@@ -1,0 +1,16 @@
+INFO [2019-12-04 13:27:32] $x
+INFO [2019-12-04 13:27:32] list(TPM_DEGs_deseq2_2_8$ensembl_gene_id, TRC_DEGs_deseq2_2_8$ensembl_gene_id, 
+INFO [2019-12-04 13:27:32]     TPM_DEGs_edgeR_2_8$rowname, TRC_DEGs_edgeR_2_8$rowname)
+INFO [2019-12-04 13:27:32] 
+INFO [2019-12-04 13:27:32] $filename
+INFO [2019-12-04 13:27:32] [1] "TPMvsTRC&DESeq2vsedgeR.png"
+INFO [2019-12-04 13:27:32] 
+INFO [2019-12-04 13:27:32] $imagetype
+INFO [2019-12-04 13:27:32] [1] "png"
+INFO [2019-12-04 13:27:32] 
+INFO [2019-12-04 13:27:32] $category.names
+INFO [2019-12-04 13:27:32] c("TPM_DESeq2", "TRC_DESeq2", "TPM_edgeR", "TRC_edgeR")
+INFO [2019-12-04 13:27:32] 
+INFO [2019-12-04 13:27:32] $width
+INFO [2019-12-04 13:27:32] [1] 3000
+INFO [2019-12-04 13:27:32] 
