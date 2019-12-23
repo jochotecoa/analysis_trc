@@ -1,0 +1,10 @@
+INFO [2019-12-10 15:09:13] $x
+INFO [2019-12-10 15:09:13] list(trc_degs$rowname[!is.na(trc_degs$adj.P.Val_UNTR_008)], tpm_degs$rowname[!is.na(trc_degs$adj.P.Val_UNTR_008)])
+INFO [2019-12-10 15:09:13] 
+INFO [2019-12-10 15:09:13] $filename
+INFO [2019-12-10 15:09:13] [1] "002vs008_TPMvsTRC.png"
+INFO [2019-12-10 15:09:13] 
+INFO [2019-12-10 15:09:13] $imagetype
+INFO [2019-12-10 15:09:13] [1] "png"
+INFO [2019-12-10 15:09:13] 
+ERROR [2019-12-10 15:09:13] Unexpected parameter length for 'category'

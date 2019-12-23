@@ -1,0 +1,12 @@
+INFO [2019-12-10 15:11:03] $x
+INFO [2019-12-10 15:11:03] list(trc_degs$rowname[!is.na(trc_degs$adj.P.Val_UNTR_008)], tpm_degs$rowname[!is.na(trc_degs$adj.P.Val_UNTR_008)])
+INFO [2019-12-10 15:11:03] 
+INFO [2019-12-10 15:11:03] $filename
+INFO [2019-12-10 15:11:03] [1] "002vs008_TPMvsTRC.png"
+INFO [2019-12-10 15:11:03] 
+INFO [2019-12-10 15:11:03] $category.names
+INFO [2019-12-10 15:11:03] c("trc", "tpm")
+INFO [2019-12-10 15:11:03] 
+INFO [2019-12-10 15:11:03] $imagetype
+INFO [2019-12-10 15:11:03] [1] "png"
+INFO [2019-12-10 15:11:03] 
