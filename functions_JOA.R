@@ -311,3 +311,51 @@ mergeFilesRds = function(files_patt =  'quant.sf', by_col = 'Name',
   }
   return(big_quant_voom)
 } 
+
+iq = function(x, na.rm = F) {
+	if (na.rm) {x = na.omit(x)}
+	first_q = as.numeric(quantile(x, 0.25))
+	third_q = as.numeric(quantile(x, 0.75))
+	y = third_q - first_q
+	return(y)
+}
+
+outlier = function(x, y=NULL, na.rm = F, onlyExtreme = F) {
+	outliers = NULL
+	if (na.rm) {x = na.omit(x)}
+	q1 = quantile(x, 0.25)
+	q3 = quantile(x, 0.75)
+	
+	if (!is.null(y)) {
+		isOutlier = y < q1 - 1.5*iq(x) | y > q3 + 1.5*iq(x)
+		if (onlyExtreme) {
+			isOutlier = y < q1 - 3*iq(x) | y > q3 + 3*iq(x)
+		}
+		return(as.logical(isOutlier))
+	}
+	
+	for (i in x) {
+		isOutlier = i < q1 - 1.5*iq(x) | i > q3 + 1.5*iq(x)
+		if (onlyExtreme) {
+			isOutlier = i < q1 - 3*iq(x) | i > q3 + 3*iq(x)
+		}
+		if (isOutlier) {outliers = c(outliers, i)}
+	}
+	return(outliers)
+}
+
+shift_median = function(df, median_of_medians) {
+	for (i in colnames(df)) {
+		sample = df[, i]
+		corr_factor = median_of_medians - median(sample, na.rm = T)
+		df[, i] = df[, i] + corr_factor
+	}
+	return(df)
+}
+
+normalizeProteomics = function(df) {
+	medians = apply(df, 2, median, na.rm = T)
+	median_of_medians = median(medians, na.rm = T)
+	df = shift_median(df, median_of_medians)
+	return(df)
+}
