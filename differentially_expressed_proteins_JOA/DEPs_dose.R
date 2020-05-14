@@ -118,9 +118,9 @@ if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0) {
     cleanProtIds() %>% 
     remove_rownames() %>% 
     column_to_rownames('uniprot_gn') %>% 
-    select(-Row.Names)
-  # select(-X, -contains('.1')) %>% 
-  # select(contains('PTX')) 
+    dplyr::select(-Row.Names)
+  # dplyr::select(-X, -contains('.1')) %>% 
+  # dplyr::select(contains('PTX')) 
   
   proteomx_log2 %>% naToZero() %>% as.matrix.data.frame() %>% heatmap()
   
@@ -172,10 +172,10 @@ proteomx_untr = read.table('Hecatos_Cardiac_Px_Untreated_pre-processed_renamed.t
 	cleanProtIds %>%
 	remove_rownames() %>% 
 	column_to_rownames('uniprot_gn') %>% 
-	select(-Row.Names) %>%
+	dplyr::select(-Row.Names) %>%
 	filterSamplesBySeqDepth %>%
+  log2() %>%
 	normalizeProteomics %>%
-	log2 %>%
 	dplyr::select(matches('002|008|024|072'))
 
 ##### Analysis #####
@@ -186,9 +186,9 @@ proteomx_log2 %>% apply(2, median, na.rm = T) %>%
   barplot(las = 2, main = 'Median Proteomics Expression per Sample')
 ### Get differentially exp %>% sed proteins
 
-the_cols = prot_log_norm %>% select(contains('The')) %>% 
+the_cols = prot_log_norm %>% dplyr::select(contains('The')) %>% 
   dplyr::select(matches('002|008|024|072')) %>% colnames()
-tox_cols = prot_log_norm %>% select(contains('Tox')) %>% 
+tox_cols = prot_log_norm %>% dplyr::select(contains('Tox')) %>% 
   dplyr::select(matches('002|008|024|072')) %>% colnames()
 
 # ii) for every treatment/dose combination and for each time-point 
@@ -249,12 +249,12 @@ proteomx = 2^prot_log_norm %>%
 colnames(proteomx) = paste0('Proteomics_', colnames(proteomx))
 
 proteomx_pval = merge.data.frame(x = rownames_to_column(proteomx), 
-                                y = rownames_to_column(select(theVStox_t.test, matches('p.value_|statistic.t_'))), 
+                                y = rownames_to_column(dplyr::select(theVStox_t.test, matches('p.value_|statistic.t_'))), 
                                 by = 'rowname', all = T) %>% 
-                	merge.data.frame(y = rownames_to_column(select(untVSthe_t.test, 
+                	merge.data.frame(y = rownames_to_column(dplyr::select(untVSthe_t.test, 
                 				matches('p.value_|statistic.t_'))), 
                                 by = 'rowname', all = T) %>% 
-                        merge.data.frame(y = rownames_to_column(select(untVStox_t.test, 
+                        merge.data.frame(y = rownames_to_column(dplyr::select(untVStox_t.test, 
                 				matches('p.value_|statistic.t_'))), 
                                 by = 'rowname', all = T) %>% 
   			column_to_rownames() 
@@ -264,10 +264,20 @@ p.val_vars = colnames(proteomx_pval)%>% .[grep('p.value', .)]
 
 mart = openMart2018()
 
+biomart_table = biomaRt::getBM(attributes = c('transcript_biotype', 
+                                  'uniprotswissprot', 
+                                  "ensembl_gene_id", 
+                                  "external_gene_name",
+                                  "ensembl_transcript_id"), 
+               filters = 'uniprotswissprot', 
+               values = rownames(proteomx_pval), mart = mart) %>% 
+  dplyr::filter(transcript_biotype == 'protein_coding')
+
 proteomx_biom = merge.data.frame(x = rownames_to_column(proteomx_pval), 
-                                 y = biomart_table, by.x = 'rowname', by.y = 'UniProtKB/Swiss-Prot ID') %>% 
-  filter(`Transcript type` == 'protein_coding') %>% 
-  rename(`UniProtKB/Swiss-Prot ID` = rowname) 
+                                 y = biomart_table, by.x = 'rowname', 
+                                 by.y = 'uniprotswissprot') %>% 
+  rename(uniprotswissprot = rowname) %>% 
+  rownames_to_column
 
 proteomx_sign = proteomx_biom %>% filter(p.value < 0.05) 
 
