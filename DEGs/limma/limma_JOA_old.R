@@ -84,20 +84,20 @@ processLima = function(x, prot_cod = F, DETs = F) {
   
   tps_2 = seq(4, 10, 3)
   
-  i = 0
+  i = 0; rm(DEGs, DEGs_final); x = log_trc
   
   for (tp_2 in tps_2) {
     tp_2 = tp_2:(tp_2 + 2)
     design = model.matrix(~ timepoints[c(1:3, tp_2)])
     
-    fit = lmFit(log_trc[, c(1:3, tp_2)], design = design[, 2])
+    fit = lmFit(x[, c(1:3, tp_2)], design = design[, 2])
     fit = eBayes(fit, trend = T)
     DEGs = topTable(fit, p.value = 0.05, number = Inf)
     if (length(DEGs) > 0) {
-      if (DETs) {
-        DEGs = transcrToGene(DEGs, aggregate = T) %>% 
-          column_to_rownames('ensembl_gene_id')
-      }
+      # if (DETs) {
+      #   DEGs = transcrToGene(DEGs, aggregate = T) %>% 
+      #     column_to_rownames('ensembl_gene_id')
+      # }
       colnames(DEGs) = paste(colnames(DEGs), timepoints[tp_2[1]], sep = '_')
       DEGs = rownames_to_column(DEGs)
       
