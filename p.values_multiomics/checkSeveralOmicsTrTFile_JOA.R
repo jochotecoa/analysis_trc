@@ -197,7 +197,7 @@ trt_df_geneid = trt_df_geneid %>% group_by(ensembl_gene_id) %>%
   column_to_rownames('ensembl_gene_id')
 
 # mutate(p.adj_trt = p.adjust(p.value_trt, method = 'BH'), 
-#        p.adj_tpm = p.adjust(p.value_tpm, method = 'BH')) %>% 
+#        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
 #   rename(p.adj_prx = p.adj) %>% 
 
 
@@ -251,18 +251,24 @@ trt_df_t.tests = merge.data.frame(x = rownames_to_column(trt_df_geneid),
 
 # Combine transcrx and protx ----------------------------------------------
 
+proteomx_biom_filt = proteomx_biom %>% 
+  mutate(id = paste0(ensembl_gene_id, '_', uniprotswissprot)) %>%
+  .[!duplicated(.[, 'id']), ] %>% 
+  dplyr::select(-c(id, rowname))
 
 trt_proteomx = merge.data.frame(x = rownames_to_column(trt_df_t.tests), 
-                                y = dplyr::select(.data = proteomx_biom, 
+                                y = dplyr::select(.data = proteomx_biom_filt, 
                                            -ensembl_transcript_id), 
                                 by.x = 'rowname',
-                                by.y = 'Gene stable ID') %>% 
-  rename(p.value_prx = p.value, 
-         p.adj_prx = p.adj) %>% 
-  mutate(p.adj_trt = p.adjust(p.value_trt, method = 'BH'), 
-         p.adj_tpm = p.adjust(p.value_tpm, method = 'BH')) %>% 
-  filter(!duplicated(rowname)) %>% 
+                                by.y = 'ensembl_gene_id') %>% 
+  mutate(rowname = paste0(rowname, '_', uniprotswissprot)) %>%
   column_to_rownames()
+  # rename(p.value_prx = p.value, 
+  #        p.adj_prx = p.adj) %>% 
+  # mutate(p.adj_trt = p.adjust(p.value_trt, method = 'BH'), 
+  #        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
+  # # filter(!duplicated(rowname)) %>% 
+  # column_to_rownames()
 
 if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
   trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072_3'))
@@ -325,7 +331,7 @@ test = trt_proteomx[b,,F]
 if (plotting) {
 	trt_proteomx$p.adj_trt %>% 
 	  hist(breaks = seq(0,1,0.05), main = 'TrT', xlab = 'p. adjusted values')
-	trt_proteomx$p.adj_tpm %>% 
+	trt_proteomx$p.adj_theVStox_TPM %>% 
 	  hist(breaks = seq(0,1,0.05), main = 'TPM', xlab = 'p. adjusted values')
 	trt_proteomx$p.adj_prx %>% 
 	  hist(breaks = seq(0,1,0.05), main = 'Proteomics', xlab = 'p. adjusted values')
@@ -335,29 +341,29 @@ if (plotting) {
 # Best cases --------------------------------------------------------------
 
 
-# VVV
-vvv = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.value_trt < 0.05,
-    p.value_tpm > 0.05,
-    p.value_prx < 0.05, 
-    sign(statistic.t_prx) == sign(statistic.t_trt)
-  ) %>% 
-  column_to_rownames()
-# test %>% nrow() %>% print()
-
-# AAA
-aaa = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_trt < 0.05,
-    p.adj_tpm > 0.05,
-    p.adj_prx < 0.05,
-    sign(statistic.t_prx) == sign(statistic.t_trt)
-  ) %>% 
-  column_to_rownames()
-
+# # VVV
+# vvv = trt_proteomx %>% 
+#   rownames_to_column() %>% 
+#   filter(
+#     p.value_trt < 0.05,
+#     p.value_tpm > 0.05,
+#     p.value_prx < 0.05, 
+#     sign(statistic.t_prx) == sign(statistic.t_trt)
+#   ) %>% 
+#   column_to_rownames()
+# # test %>% nrow() %>% print()
+# 
+# # AAA
+# aaa = trt_proteomx %>% 
+#   rownames_to_column() %>% 
+#   filter(
+#     p.adj_trt < 0.05,
+#     p.adj_theVStox_TPM > 0.05,
+#     p.adj_prx < 0.05,
+#     sign(statistic.t_prx) == sign(statistic.t_trt)
+#   ) %>% 
+#   column_to_rownames()
+# 
 
 # AVV
 avv = trt_proteomx %>% 
@@ -381,23 +387,23 @@ avv_bad = trt_proteomx %>%
   ) %>% 
   column_to_rownames()
 
-# AVA
-ava = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_trt < 0.05,
-    p.value_tpm > 0.05,
-    p.adj_prx < 0.05,
-    sign(statistic.t_prx) == sign(statistic.t_trt)
-  ) %>% 
-  column_to_rownames()
+# # AVA
+# ava = trt_proteomx %>% 
+#   rownames_to_column() %>% 
+#   filter(
+#     p.adj_trt < 0.05,
+#     p.value_tpm > 0.05,
+#     p.adj_prx < 0.05,
+#     sign(statistic.t_prx) == sign(statistic.t_trt)
+#   ) %>% 
+#   column_to_rownames()
 
 # VAV
 vav = trt_proteomx %>% 
   rownames_to_column() %>% 
   filter(
     p.value_trt > 0.05,
-    p.adj_tpm < 0.05,
+    p.adj_theVStox_TPM < 0.05,
     p.value_prx > 0.05
   ) %>% 
   column_to_rownames()
@@ -407,7 +413,7 @@ vav_bad = trt_proteomx %>%
   rownames_to_column() %>% 
   filter(
     p.value_trt > 0.05,
-    p.adj_tpm < 0.05,
+    p.adj_theVStox_TPM < 0.05,
     p.value_prx < 0.05
   ) %>% 
   column_to_rownames()
@@ -415,47 +421,72 @@ vav_bad = trt_proteomx %>%
 # Sensitivity and Specificity --------------------------------------------------
  
  #### TPM ####
-# TP
-tp_tpm = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_tpm < 0.05,
-    p.value_prx < 0.05,
-    sign(statistic.t_prx) == sign(statistic.t_tpm)
-  ) %>% 
-  column_to_rownames()
+
+conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
+  # Refer to column names stored as strings with the `.data` pronoun:
+  tp = df %>%
+    rownames_to_column() %>%
+    filter(
+      .data[[pred[[1]]]] < 0.05,
+      .data[[true[[1]]]] < 0.05,
+      sign(.data[[dir_pred[[1]]]]) == sign(.data[[dir_true[[1]]]])
+    ) %>% 
+    column_to_rownames() %>% 
+    rownames()
   
-# TN
-tn_tpm = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.value_tpm > 0.05,
-    p.value_prx > 0.05,
-  ) %>% 
-  column_to_rownames()
+  tn = df %>%
+    rownames_to_column() %>%
+    filter(
+      .data[[pred[[1]]]] > 0.05,
+      .data[[true[[1]]]] > 0.05
+    ) %>% 
+    column_to_rownames() %>% 
+    rownames()
+  
+  fp1 = df %>%
+    rownames_to_column() %>%
+    filter(
+      .data[[pred[[1]]]] < 0.05,
+      .data[[true[[1]]]] > 0.05
+    ) %>% 
+    column_to_rownames() %>% 
+    rownames() 
+  
+  fp2 =  df %>%
+    rownames_to_column() %>%
+    filter(
+      .data[[pred[[1]]]] < 0.05,
+      .data[[true[[1]]]] < 0.05,
+      sign(.data[[dir_pred[[1]]]]) != sign(.data[[dir_true[[1]]]])
+    ) %>% 
+    column_to_rownames() %>% 
+    rownames()
+  
+  fp = c(fp1, fp2)
+  
+  fn = df %>%
+    rownames_to_column() %>%
+    filter(
+      .data[[pred[[1]]]] > 0.05,
+      .data[[true[[1]]]] < 0.05
+    ) %>% 
+    column_to_rownames() %>% 
+    rownames() 
+  
+  conf_matr = list(true_positive = tp,
+                   true_negative = tn,
+                   false_positive = fp,
+                   false_negative = fn)
+  
+  return(conf_matr)
+}
+# debug(conf_matrix)
+a = conf_matrix(df=trt_proteomx, 
+                pred= 'p.adj_theVStox_TPM', 
+                true='p.value_theVStox_prx', 
+                dir_pred='statistic.t_theVStox_TPM', 
+                dir_true='statistic.t_theVStox_prx')
 
-# Falses
-
-falses_tpm = rownames(trt_proteomx) %>% 
-	setdiff(rownames(tp_tpm)) %>%
-	setdiff(rownames(tn_tpm)) %>% 
-	trt_proteomx[., ]
-	
-# FP
-fp = falses_tpm %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_tpm < 0.05
-  ) %>% 
-  column_to_rownames()
-
-# FN
-fn = falses_tpm %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.value_tpm > 0.05
-  ) %>% 
-  column_to_rownames()
 
 #### TRT ####
 # TP
