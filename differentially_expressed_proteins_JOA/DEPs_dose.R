@@ -121,8 +121,9 @@ if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0) {
     dplyr::select(-Row.Names)
   # dplyr::select(-X, -contains('.1')) %>% 
   # dplyr::select(contains('PTX')) 
-  
-  proteomx_log2 %>% naToZero() %>% as.matrix.data.frame() %>% heatmap()
+  if (plotting) {
+    proteomx_log2 %>% naToZero() %>% as.matrix.data.frame() %>% heatmap()
+  }
   
   # proteomx_log2 %>% dist() %>% naToZero() %>% hclust() %>% plot()
   
@@ -154,11 +155,13 @@ if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0) {
   
   colnames(proteomx_log2) = sample_names
   
-  proteomx_log2 %>% naToZero() %>% as.matrix.data.frame() %>% heatmap()
+  if (plotting) {
+    proteomx_log2 %>% naToZero() %>% as.matrix.data.frame() %>% heatmap()
+  }
   
-  write.table(x = proteomx_log2, 
+  try(write.table(x = proteomx_log2, 
               file = 
-                'Hecatos_Cardiac_Px_PTX_Ther_Tox_log2_norm-renamed-by-Juan.txt')
+                'Hecatos_Cardiac_Px_PTX_Ther_Tox_log2_norm-renamed-by-Juan.txt'))
   
 } else {
   proteomx_log2 = 
@@ -182,8 +185,10 @@ proteomx_untr = read.table('Hecatos_Cardiac_Px_Untreated_pre-processed_renamed.t
 colnames(proteomx_log2) = colnames(proteomx_log2) %>% gsub(pattern = 'XPTX', replacement = 'PTX')
 
 prot_log_norm = filterSamplesBySeqDepth(proteomx_log2)
-proteomx_log2 %>% apply(2, median, na.rm = T) %>% 
-  barplot(las = 2, main = 'Median Proteomics Expression per Sample')
+if (plotting) {
+  proteomx_log2 %>% apply(2, median, na.rm = T) %>% 
+    barplot(las = 2, main = 'Median Proteomics Expression per Sample')
+}
 ### Get differentially exp %>% sed proteins
 
 the_cols = prot_log_norm %>% dplyr::select(contains('The')) %>% 
@@ -279,7 +284,7 @@ proteomx_biom = merge.data.frame(x = rownames_to_column(proteomx_pval),
   rename(uniprotswissprot = rowname) %>% 
   rownames_to_column
 
-proteomx_sign = proteomx_biom %>% filter(p.value < 0.05) 
+proteomx_sign = proteomx_biom %>% try(filter(p.value < 0.05))
 
 
 # setwd('/share/analysis/hecatos/juantxo/Score/output/DOC/2020-03-09_13:09:20_UTC/TRCscore/factors_DOC/')
