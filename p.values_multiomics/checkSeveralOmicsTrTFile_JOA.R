@@ -14,8 +14,8 @@ viewPlotProtx = function(df, row_i, p.val_col = NULL){
   r.data = df[row_i, ]
   r.name = main = rownames(r.data)
   if (!is.null(p.val_col)) {
-  	p.value = format.pval(r.data[, p.val_col], 3)
-  	main = paste0(r.name, ' ; ', 'p.value = ', p.value)
+    p.value = format.pval(r.data[, p.val_col], 3)
+    main = paste0(r.name, ' ; ', 'p.value = ', p.value)
   }
   r.data %>% 
     dplyr::select(matches('Proteomics')) %>% 
@@ -23,11 +23,11 @@ viewPlotProtx = function(df, row_i, p.val_col = NULL){
     barplot(las = 2, main = main, ylab = 'Proteomics Expression')
   
   for (l in seq(3.7, 85.1, 3.6)) { 
-  	if (l == 14.5) {
-  		abline(v = 14.5, col = 'black', lwd = 3, lty = 2)
-	} else {
-		abline(v = l, col = 'gray')
-	}
+    if (l == 14.5) {
+      abline(v = 14.5, col = 'black', lwd = 3, lty = 2)
+    } else {
+      abline(v = l, col = 'gray')
+    }
   }
 }
 
@@ -43,11 +43,11 @@ plotOmics = function(df, omics, transcript, ylim = NULL, ...) {
   }
   
   for (l in seq(3.5, 21.5, 3)) { 
-  	if (l == 12.5) {
-  		abline(v = 12.5, col = 'black', lwd = 6, lty = 1)
-	} else {
-		abline(v = l, col = 'gray')
-	}
+    if (l == 12.5) {
+      abline(v = 12.5, col = 'black', lwd = 6, lty = 1)
+    } else {
+      abline(v = l, col = 'gray')
+    }
   }
   
   par(new = TRUE)
@@ -62,12 +62,12 @@ theVsTox_fun <- function(df, omics, cond1, cond2, title = NULL, plot = F, ...) {
     apply_2D(col.x = the_cols, col.y = tox_cols, ...)
   
   if (plot) {
-	res.df$p.value_tpm %>% 
-		as.character() %>%
-		as.numeric() %>%
-		na.omit() %>% 
-		hist(breaks = seq(0, 1, 0.05), main = 'TPM', xlab = 'p. value')
-	}  
+    res.df$p.value_tpm %>% .
+      as.character() %>%
+      as.numeric() %>%
+      na.omit() %>% 
+      hist(breaks = seq(0, 1, 0.05), main = 'TPM', xlab = 'p. value')
+  }  
   
   
   
@@ -79,11 +79,11 @@ theVsTox_fun <- function(df, omics, cond1, cond2, title = NULL, plot = F, ...) {
     rownames_to_column() %>% 
     mutate_all(as.character) %>% 
     mutate_at(vars(matches('p.value_|statistic.t_')), as.numeric)
- 
+  
   
   res.df[, paste0('p.adj_', title)] = 
     p.adjust(res.df[, paste0('p.value_', title)], 'BH')
-    
+  
   return(res.df)
   
 }
@@ -95,7 +95,7 @@ forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
 
-comp = 'PTX'
+comp = '5FU'
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
@@ -160,9 +160,9 @@ trt_untr = trt_untr[, !(colnames(trt_untr) %in% trt_vars)]
 trt_untr = trt_untr[, !grepl('hsa', colnames(trt_untr))]
 
 if (plotting) {
-	trt_df %>% dplyr::select(starts_with('target')) %>% 
-	  apply(2, median, na.rm = T) %>% 
-	  barplot(las = 2, main = 'Median TPM expression per Sample')
+  trt_df %>% dplyr::select(starts_with('target')) %>% 
+    apply(2, median, na.rm = T) %>% 
+    barplot(las = 2, main = 'Median TPM expression per Sample')
 }
 
 comp_cas = 12
@@ -183,12 +183,12 @@ trt_comp_untr = merge.data.frame(x = rownames_to_column(trt_df),
   column_to_rownames()
 
 trt_df_geneid = merge.data.frame(x = rownames_to_column(trt_comp_untr), 
-                          y = dplyr::select(.data = proteomx_biom, 
-                                     ensembl_transcript_id, ensembl_gene_id), 
-                          by.x = 'rowname',
-                          by.y = 'ensembl_transcript_id') #%>% 
-  # filter(!duplicated(rowname)) #%>% 
-  # column_to_rownames()
+                                 y = dplyr::select(.data = proteomx_biom, 
+                                                   ensembl_transcript_id, ensembl_gene_id), 
+                                 by.x = 'rowname',
+                                 by.y = 'ensembl_transcript_id') #%>% 
+# filter(!duplicated(rowname)) #%>% 
+# column_to_rownames()
 
 
 
@@ -196,7 +196,7 @@ trt_df_geneid = trt_df_geneid %>% group_by(ensembl_gene_id) %>%
   summarise_if(is.numeric, sum, na.rm = T) %>% 
   column_to_rownames('ensembl_gene_id')
 
-# mutate(p.adj_trt = p.adjust(p.value_trt, method = 'BH'), 
+# mutate(p.adj_theVStox_TPM = p.adjust(p.adj_theVStox_TPM, method = 'BH'), 
 #        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
 #   rename(p.adj_prx = p.adj) %>% 
 
@@ -204,9 +204,9 @@ trt_df_geneid = trt_df_geneid %>% group_by(ensembl_gene_id) %>%
 # t.tests -----------------------------------------------------------------
 
 theVStox_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',  
-                          FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
-                          paired = T, complete_cases = comp_cas,
-                          title = 'theVStox_TPM')
+                                   FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
+                                   paired = T, complete_cases = comp_cas,
+                                   title = 'theVStox_TPM')
 
 # If it takes 1h, column_to_rownames() #If result.df not found, exchange TrT/TRC
 untVSthe_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',   
@@ -235,8 +235,8 @@ untVStox_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,
                                    title = 'untVStox_TrT')
 
 trt_df_t.tests = merge.data.frame(x = rownames_to_column(trt_df_geneid), 
-                              y = theVStox_t.test_tpm,
-                              by = 'rowname', all = T) %>% 
+                                  y = theVStox_t.test_tpm,
+                                  by = 'rowname', all = T) %>% 
   merge.data.frame(y = untVSthe_t.test_tpm,
                    by = 'rowname', all = T) %>% 
   merge.data.frame(y = untVStox_t.test_tpm, 
@@ -258,17 +258,17 @@ proteomx_biom_filt = proteomx_biom %>%
 
 trt_proteomx = merge.data.frame(x = rownames_to_column(trt_df_t.tests), 
                                 y = dplyr::select(.data = proteomx_biom_filt, 
-                                           -ensembl_transcript_id), 
+                                                  -ensembl_transcript_id), 
                                 by.x = 'rowname',
                                 by.y = 'ensembl_gene_id') %>% 
   mutate(rowname = paste0(rowname, '_', uniprotswissprot)) %>%
   column_to_rownames()
-  # rename(p.value_prx = p.value, 
-  #        p.adj_prx = p.adj) %>% 
-  # mutate(p.adj_trt = p.adjust(p.value_trt, method = 'BH'), 
-  #        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
-  # # filter(!duplicated(rowname)) %>% 
-  # column_to_rownames()
+# rename(p.value_theVStox_prx = p.value, 
+#        p.adj_prx = p.adj) %>% 
+# mutate(p.adj_theVStox_TPM = p.adjust(p.adj_theVStox_TPM, method = 'BH'), 
+#        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
+# # filter(!duplicated(rowname)) %>% 
+# column_to_rownames()
 
 if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
   trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072_3'))
@@ -329,12 +329,12 @@ b = a[a$min_the > a$max_tox,,F] %>% rownames()
 test = trt_proteomx[b,,F]
 
 if (plotting) {
-	trt_proteomx$p.adj_trt %>% 
-	  hist(breaks = seq(0,1,0.05), main = 'TrT', xlab = 'p. adjusted values')
-	trt_proteomx$p.adj_theVStox_TPM %>% 
-	  hist(breaks = seq(0,1,0.05), main = 'TPM', xlab = 'p. adjusted values')
-	trt_proteomx$p.adj_prx %>% 
-	  hist(breaks = seq(0,1,0.05), main = 'Proteomics', xlab = 'p. adjusted values')
+  trt_proteomx$p.adj_theVStox_TPM %>% 
+    hist(breaks = seq(0,1,0.05), main = 'TrT', xlab = 'p. adjusted values')
+  trt_proteomx$p.adj_theVStox_TPM %>% 
+    hist(breaks = seq(0,1,0.05), main = 'TPM', xlab = 'p. adjusted values')
+  trt_proteomx$p.adj_prx %>% 
+    hist(breaks = seq(0,1,0.05), main = 'Proteomics', xlab = 'p. adjusted values')
 }
 
 
@@ -345,9 +345,9 @@ if (plotting) {
 # vvv = trt_proteomx %>% 
 #   rownames_to_column() %>% 
 #   filter(
-#     p.value_trt < 0.05,
+#     p.adj_theVStox_TPM < 0.05,
 #     p.value_tpm > 0.05,
-#     p.value_prx < 0.05, 
+#     p.value_theVStox_prx < 0.05, 
 #     sign(statistic.t_prx) == sign(statistic.t_trt)
 #   ) %>% 
 #   column_to_rownames()
@@ -357,7 +357,7 @@ if (plotting) {
 # aaa = trt_proteomx %>% 
 #   rownames_to_column() %>% 
 #   filter(
-#     p.adj_trt < 0.05,
+#     p.adj_theVStox_TPM < 0.05,
 #     p.adj_theVStox_TPM > 0.05,
 #     p.adj_prx < 0.05,
 #     sign(statistic.t_prx) == sign(statistic.t_trt)
@@ -369,9 +369,9 @@ if (plotting) {
 avv = trt_proteomx %>% 
   rownames_to_column() %>% 
   filter(
-    p.adj_trt < 0.05,
+    p.adj_theVStox_TPM < 0.05,
     p.value_tpm > 0.05,
-    p.value_prx < 0.05,
+    p.value_theVStox_prx < 0.05,
     sign(statistic.t_prx) == sign(statistic.t_trt)
   ) %>% 
   column_to_rownames()
@@ -380,9 +380,9 @@ avv = trt_proteomx %>%
 avv_bad = trt_proteomx %>% 
   rownames_to_column() %>% 
   filter(
-    p.adj_trt < 0.05,
+    p.adj_theVStox_TPM < 0.05,
     p.value_tpm > 0.05,
-    p.value_prx > 0.05,
+    p.value_theVStox_prx > 0.05,
     sign(statistic.t_prx) == sign(statistic.t_trt)
   ) %>% 
   column_to_rownames()
@@ -391,7 +391,7 @@ avv_bad = trt_proteomx %>%
 # ava = trt_proteomx %>% 
 #   rownames_to_column() %>% 
 #   filter(
-#     p.adj_trt < 0.05,
+#     p.adj_theVStox_TPM < 0.05,
 #     p.value_tpm > 0.05,
 #     p.adj_prx < 0.05,
 #     sign(statistic.t_prx) == sign(statistic.t_trt)
@@ -402,9 +402,9 @@ avv_bad = trt_proteomx %>%
 vav = trt_proteomx %>% 
   rownames_to_column() %>% 
   filter(
-    p.value_trt > 0.05,
+    p.adj_theVStox_TPM > 0.05,
     p.adj_theVStox_TPM < 0.05,
-    p.value_prx > 0.05
+    p.value_theVStox_prx > 0.05
   ) %>% 
   column_to_rownames()
 
@@ -412,15 +412,15 @@ vav = trt_proteomx %>%
 vav_bad = trt_proteomx %>% 
   rownames_to_column() %>% 
   filter(
-    p.value_trt > 0.05,
+    p.adj_theVStox_TPM > 0.05,
     p.adj_theVStox_TPM < 0.05,
-    p.value_prx < 0.05
+    p.value_theVStox_prx < 0.05
   ) %>% 
   column_to_rownames()
- 
+
 # Sensitivity and Specificity --------------------------------------------------
- 
- #### TPM ####
+
+#### TPM ####
 
 conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
   # Refer to column names stored as strings with the `.data` pronoun:
@@ -480,106 +480,124 @@ conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
   
   return(conf_matr)
 }
-# debug(conf_matrix)
-a = conf_matrix(df=trt_proteomx, 
-                pred= 'p.adj_theVStox_TPM', 
-                true='p.value_theVStox_prx', 
-                dir_pred='statistic.t_theVStox_TPM', 
-                dir_true='statistic.t_theVStox_prx')
+# Therapeutic versus Toxic
+conf_matrix_tpm_theVStox = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_theVStox_TPM', 
+                                       true='p.value_theVStox_prx', 
+                                       dir_pred='statistic.t_theVStox_TPM', 
+                                       dir_true='statistic.t_theVStox_prx')
 
+conf_matrix_trt_theVStox = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_theVStox_TrT', 
+                                       true='p.value_theVStox_prx', 
+                                       dir_pred='statistic.t_theVStox_TrT', 
+                                       dir_true='statistic.t_theVStox_prx')
+
+# Untreated vs Therapeutic
+
+conf_matrix_tpm_untVSthe = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_untVSthe_TPM', 
+                                       true='p.value_untVSthe_prx', 
+                                       dir_pred='statistic.t_untVSthe_TPM', 
+                                       dir_true='statistic.t_untVSthe_prx')
+
+conf_matrix_trt_untVSthe = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_untVSthe_TrT', 
+                                       true='p.value_untVSthe_prx', 
+                                       dir_pred='statistic.t_untVSthe_TrT', 
+                                       dir_true='statistic.t_untVSthe_prx')
+
+# Untreated vs Toxic
+
+conf_matrix_tpm_untVStox = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_untVStox_TPM', 
+                                       true='p.value_untVStox_prx', 
+                                       dir_pred='statistic.t_untVStox_TPM', 
+                                       dir_true='statistic.t_untVStox_prx')
+
+conf_matrix_trt_untVStox = conf_matrix(df=trt_proteomx,
+                                       pred= 'p.adj_untVStox_TrT', 
+                                       true='p.value_untVStox_prx', 
+                                       dir_pred='statistic.t_untVStox_TrT', 
+                                       dir_true='statistic.t_untVStox_prx')
+
+# List of lists
+
+all_conf_matrices = list(conf_matrix_trt_theVStox = conf_matrix_trt_theVStox,
+                         conf_matrix_tpm_theVStox = conf_matrix_tpm_theVStox,
+                         conf_matrix_trt_untVSthe = conf_matrix_trt_untVSthe,
+                         conf_matrix_tpm_untVSthe = conf_matrix_tpm_untVSthe, 
+                         conf_matrix_trt_untVStox = conf_matrix_trt_untVStox,
+                         conf_matrix_tpm_untVStox = conf_matrix_tpm_untVStox)
+
+i = 1
+for (cf in all_conf_matrices) {
+  all_conf_matrices %>% names() %>% .[i] %>% print()
+  print(summary(cf))
+  i = i + 1
+}
+
+findCorrected = function(list1, list2){
+  fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
+    sum %>% 
+    print
+  fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
+    sum %>% 
+    print
+  fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
+    sum %>% 
+    print
+  fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
+    sum %>% 
+    print
+  invisible(return(NULL))
+}
+
+findCorrected(conf_matrix_tpm_theVStox, conf_matrix_trt_theVStox)
+findCorrected(conf_matrix_tpm_untVSthe, conf_matrix_trt_untVSthe)
+findCorrected(conf_matrix_tpm_untVStox, conf_matrix_trt_untVStox)
 
 #### TRT ####
-# TP
-tp_trt = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_trt < 0.05,
-    p.value_prx < 0.05,
-    sign(statistic.t_prx) == sign(statistic.t_trt)
-  ) %>% 
-  column_to_rownames()
-  
-# TN
-tn_trt = trt_proteomx %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.value_trt > 0.05,
-    p.value_prx > 0.05,
-  ) %>% 
-  column_to_rownames()
-
-# Falses
-
-falses_trt = setdiff(rownames(trt_proteomx), rownames(tp_trt)) %>%
-	setdiff(rownames(tn_trt)) %>% trt_proteomx[., ]
-	
-# FP
-fp_trt = falses_trt %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.adj_trt < 0.05
-  ) %>% 
-  column_to_rownames()
-
-# FN
-fn_trt = falses_trt %>% 
-  rownames_to_column() %>% 
-  filter(
-    p.value_trt > 0.05
-  ) %>% 
-  column_to_rownames()
-
-
 test = avv
 
 colnames(test) = colnames(test) %>% gsub('_TrT', '', .)
 
 if (plotting) {
-	for (rown in rownames(test)) {
-	  layout(matrix(c(1,2), 1, 2, byrow = T))
-	  row_data = test[rown, ]
-	  max_tpm = test[rown, , F] %>% dplyr::select(starts_with('target')) %>% max(na.rm = T)
-	  #par(mfrow = c(1, 2))
-	  
-	  viewPlotProtx(test, rown)
-	  
-	  readline(prompt = "Press [enter] to continue")
-	  
-	  plotOmics(df = trt_proteomx, omics = paste0('^', TrT_miF), 
-		    transcript = rown, xaxt = 'n', type = 'b', 
-		    ylab = 'gray: TPM | black: TrT', xlab = '',
-		    ylim = c(0, max_tpm))
-	  plotOmics(df = trt_proteomx, omics = '^target', transcript = rown, xaxt = 'n',
-		    type = 'b', col = 'gray', yaxt = 'n', xlab = '')
-	  axis(1, at = 1:24, labels = colnames(test)[grep('^target', colnames(test))], las = 2)
-	  
-	  readline(prompt = "Press [enter] to continue")
-
-	  layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-	  boxplot.dose(row_data, 'Proteomics', main = rown, ylab = 'Proteomics Expression')
-	  boxplot.dose(row_data, '^target', main = rown, ylab = 'TPM Expression')
-	  boxplot.dose(row_data, TrT_miF, main = rown, ylab = 'TrT Expression')
-	  
-	  
-	  #test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('The')) %>%
-	  #  as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-	  
-	#  test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('Tox')) %>%
-	 #   as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-	 # axis(1, at = 1:24, labels = colnames(trt_proteomx)[grep('^target',
-	  #colnames(trt_df))], las = 2)
-	  readline(prompt = "Press [enter] to continue")
-	  
-	}
+  for (rown in rownames(test)) {
+    layout(matrix(c(1,2), 1, 2, byrow = T))
+    row_data = test[rown, ]
+    max_tpm = test[rown, , F] %>% dplyr::select(starts_with('target')) %>% max(na.rm = T)
+    #par(mfrow = c(1, 2))
+    
+    viewPlotProtx(test, rown)
+    
+    readline(prompt = "Press [enter] to continue")
+    
+    plotOmics(df = trt_proteomx, omics = paste0('^', TrT_miF), 
+              transcript = rown, xaxt = 'n', type = 'b', 
+              ylab = 'gray: TPM | black: TrT', xlab = '',
+              ylim = c(0, max_tpm))
+    plotOmics(df = trt_proteomx, omics = '^target', transcript = rown, xaxt = 'n',
+              type = 'b', col = 'gray', yaxt = 'n', xlab = '')
+    axis(1, at = 1:24, labels = colnames(test)[grep('^target', colnames(test))], las = 2)
+    
+    readline(prompt = "Press [enter] to continue")
+    
+    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+    boxplot.dose(row_data, 'Proteomics', main = rown, ylab = 'Proteomics Expression')
+    boxplot.dose(row_data, '^target', main = rown, ylab = 'TPM Expression')
+    boxplot.dose(row_data, TrT_miF, main = rown, ylab = 'TrT Expression')
+    
+    
+    #test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('The')) %>%
+    #  as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
+    
+    #  test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('Tox')) %>%
+    #   as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
+    # axis(1, at = 1:24, labels = colnames(trt_proteomx)[grep('^target',
+    #colnames(trt_df))], las = 2)
+    readline(prompt = "Press [enter] to continue")
+    
+  }
 }
-
-cat(paste(comp, '\n', 'TPM_false positives:', nrow(vav), '\n', 'TPM_false negatives:', nrow(avv), '\n', 'TrT_false positives:', nrow(avv_bad), '\n', 'TrT_false negatives:', nrow(vav_bad), '\n'))
-nrow(tp)
-nrow(tn)
-nrow(fp)
-nrow(fn)
-nrow(tp_trt)
-nrow(tn_trt)
-nrow(fp_trt)
-nrow(fn_trt)
 
