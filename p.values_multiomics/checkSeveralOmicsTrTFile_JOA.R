@@ -95,7 +95,7 @@ forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
 
-comp = 'CEL'
+comp = '5FU'
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
@@ -263,6 +263,10 @@ trt_proteomx = merge.data.frame(x = rownames_to_column(trt_df_t.tests),
                                 by.y = 'ensembl_gene_id') %>% 
   mutate(rowname = paste0(rowname, '_', uniprotswissprot)) %>%
   column_to_rownames()
+
+trt_proteomx$ensembl_gene_id = trt_proteomx %>% 
+  rownames() %>% 
+  gsub('_.*', '', .)
 # rename(p.value_theVStox_prx = p.value, 
 #        p.adj_prx = p.adj) %>% 
 # mutate(p.adj_theVStox_TPM = p.adjust(p.adj_theVStox_TPM, method = 'BH'), 
