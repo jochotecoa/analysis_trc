@@ -1,8 +1,8 @@
-
+ 
 # Functions ---------------------------------------------------------------
 transformLogTPM = function(x) {
   x[is.na.data.frame(x)] = 0.25
-  x[x == 0] = 0.25
+  x[x < 1] = 0.25
   y = log2(x)
 }
 
@@ -561,120 +561,123 @@ all_conf_matrices = list(conf_matrix_trt_theVStox = conf_matrix_trt_theVStox,
 i = 1
 for (cf in all_conf_matrices) {
   all_conf_matrices %>% names() %>% .[i] %>% print()
-  print(summary(cf))
+  cf_summ = summary(cf)
+  values = cf_summ[, 1] %>% as.numeric()
+  acc = sum(values[1:2]/sum(values))
+  print(acc)
   i = i + 1
 }
-
-findCorrected = function(list1, list2){
-  fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
-    sum %>% 
-    print
-  fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
-    sum %>% 
-    print
-  fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
-    sum %>% 
-    print
-  fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
-    sum %>% 
-    print
-  invisible(return(NULL))
-}
-
-findCorrected(conf_matrix_tpm_theVStox, conf_matrix_trt_theVStox)
-findCorrected(conf_matrix_tpm_untVSthe, conf_matrix_trt_untVSthe)
-findCorrected(conf_matrix_tpm_untVStox, conf_matrix_trt_untVStox)
-
-degs <- function(df, p.val_col, comp = comp) {
-  degs_out = df %>% 
-    rownames_to_column() %>% 
-    filter(.data[[p.val_col]] < 0.05) %>% 
-    arrange(.data[[p.val_col]]) %>% 
-    column_to_rownames() %>% 
-    rownames() %>% 
-    gsub('_.*', '', .) %>% 
-    as.data.frame()
-  
-  colnames(degs_out) = p.val_col
-  
-  return(degs_out)
-}
-
-setwd('~/Desktop/')
-dir.create('limma')
-setwd('limma')
-dir.create(comp)
-setwd(comp)
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-#### TRT ####
-# test = avv
-
-# colnames(test) = colnames(test) %>% gsub('_TrT', '', .)
-
-if (plotting) {
-  for (rown in rownames(test)) {
-    layout(matrix(c(1,2), 1, 2, byrow = T))
-    row_data = test[rown, ]
-    max_tpm = test[rown, , F] %>% dplyr::select(starts_with('target')) %>% max(na.rm = T)
-    #par(mfrow = c(1, 2))
-    
-    viewPlotProtx(test, rown)
-    
-    readline(prompt = "Press [enter] to continue")
-    
-    plotOmics(df = trt_proteomx, omics = paste0('^', TrT_miF), 
-              transcript = rown, xaxt = 'n', type = 'b', 
-              ylab = 'gray: TPM | black: TrT', xlab = '',
-              ylim = c(0, max_tpm))
-    plotOmics(df = trt_proteomx, omics = '^target', transcript = rown, xaxt = 'n',
-              type = 'b', col = 'gray', yaxt = 'n', xlab = '')
-    axis(1, at = 1:24, labels = colnames(test)[grep('^target', colnames(test))], las = 2)
-    
-    readline(prompt = "Press [enter] to continue")
-    
-    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-    boxplot.dose(row_data, 'Proteomics', main = rown, ylab = 'Proteomics Expression')
-    boxplot.dose(row_data, '^target', main = rown, ylab = 'TPM Expression')
-    boxplot.dose(row_data, TrT_miF, main = rown, ylab = 'TrT Expression')
-    
-    
-    #test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('The')) %>%
-    #  as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-    
-    #  test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('Tox')) %>%
-    #   as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-    # axis(1, at = 1:24, labels = colnames(trt_proteomx)[grep('^target',
-    #colnames(trt_df))], las = 2)
-    readline(prompt = "Press [enter] to continue")
-    
-  }
-}
-
+# 
+# findCorrected = function(list1, list2){
+#   fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
+#     sum %>% 
+#     print
+#   fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
+#     sum %>% 
+#     print
+#   fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
+#     sum %>% 
+#     print
+#   fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
+#     sum %>% 
+#     print
+#   invisible(return(NULL))
+# }
+# 
+# findCorrected(conf_matrix_tpm_theVStox, conf_matrix_trt_theVStox)
+# findCorrected(conf_matrix_tpm_untVSthe, conf_matrix_trt_untVSthe)
+# findCorrected(conf_matrix_tpm_untVStox, conf_matrix_trt_untVStox)
+# 
+# degs <- function(df, p.val_col, comp = comp) {
+#   degs_out = df %>% 
+#     rownames_to_column() %>% 
+#     filter(.data[[p.val_col]] < 0.05) %>% 
+#     arrange(.data[[p.val_col]]) %>% 
+#     column_to_rownames() %>% 
+#     rownames() %>% 
+#     gsub('_.*', '', .) %>% 
+#     as.data.frame()
+#   
+#   colnames(degs_out) = p.val_col
+#   
+#   return(degs_out)
+# }
+# 
+# setwd('~/Desktop/')
+# dir.create('limma')
+# setwd('limma')
+# dir.create(comp)
+# setwd(comp)
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TPM')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TrT')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# 
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TPM')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# 
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TrT')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# 
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TPM')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# 
+# a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TrT')
+# file_naam = paste0(comp, '_', colnames(a))
+# write.table(x = a, file = file_naam, quote = F, 
+#             row.names = F, col.names = F)
+# 
+# #### TRT ####
+# # test = avv
+# 
+# # colnames(test) = colnames(test) %>% gsub('_TrT', '', .)
+# 
+# if (plotting) {
+#   for (rown in rownames(test)) {
+#     layout(matrix(c(1,2), 1, 2, byrow = T))
+#     row_data = test[rown, ]
+#     max_tpm = test[rown, , F] %>% dplyr::select(starts_with('target')) %>% max(na.rm = T)
+#     #par(mfrow = c(1, 2))
+#     
+#     viewPlotProtx(test, rown)
+#     
+#     readline(prompt = "Press [enter] to continue")
+#     
+#     plotOmics(df = trt_proteomx, omics = paste0('^', TrT_miF), 
+#               transcript = rown, xaxt = 'n', type = 'b', 
+#               ylab = 'gray: TPM | black: TrT', xlab = '',
+#               ylim = c(0, max_tpm))
+#     plotOmics(df = trt_proteomx, omics = '^target', transcript = rown, xaxt = 'n',
+#               type = 'b', col = 'gray', yaxt = 'n', xlab = '')
+#     axis(1, at = 1:24, labels = colnames(test)[grep('^target', colnames(test))], las = 2)
+#     
+#     readline(prompt = "Press [enter] to continue")
+#     
+#     layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+#     boxplot.dose(row_data, 'Proteomics', main = rown, ylab = 'Proteomics Expression')
+#     boxplot.dose(row_data, '^target', main = rown, ylab = 'TPM Expression')
+#     boxplot.dose(row_data, TrT_miF, main = rown, ylab = 'TrT Expression')
+#     
+#     
+#     #test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('The')) %>%
+#     #  as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
+#     
+#     #  test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('Tox')) %>%
+#     #   as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
+#     # axis(1, at = 1:24, labels = colnames(trt_proteomx)[grep('^target',
+#     #colnames(trt_df))], las = 2)
+#     readline(prompt = "Press [enter] to continue")
+#     
+#   }
+# }
+# 

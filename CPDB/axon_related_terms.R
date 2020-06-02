@@ -1,12 +1,36 @@
-axon_degs = read.table('~/Documents/5FU_p.adj_untVStox_TPM/GO:0048675    axon extension    (BP level 5)', header = T, sep = '\t')
+forceLibrary('VennDiagram')
+
+comp = '5FU'
+source('/share/script/hecatos/juantxo/analysis_trc/p.values_multiomics/checkSeveralOmicsTrTFile_JOA.R')
+axon_entrez_genes = read.table(file = '/share/analysis/hecatos/juantxo/Score/analysis/CPDB/gene_sets/GO:0048675    axon extension    (BP level 5)',
+                               header = F, sep = '\t')
+
+colnames(axon_entrez_genes) = c('entrezgene', 'genename')
+mart = openMart2018()
+
+biomaRt::listAttributes(mart) %>% .[, 'name'] %>% subset(., grepl('entrez', .))
+
+ens_entr = biomaRt::getBM(attributes = c("entrezgene", "ensembl_gene_id"), 
+                          filters = "ensembl_gene_id", 
+                          values = trt_proteomx$ensembl_gene_id, 
+                          mart = mart)
+
+trt_proteomx = merge.data.frame(x = trt_proteomx, y = ens_entr, 
+                                by = 'ensembl_gene_id')
 
 axon_degs$user.provided.identifier = axon_degs$user.provided.identifier %>% 
   as.character %>% 
   gsub('     ', '', .)
 
-axon_rows = trt_proteomx$ensembl_gene_id %in% axon_degs$user.provided.identifier
+axon_rows = trt_proteomx$entrezgene %in% axon_entrez_genes$entrezgene
 
 axon_trt_prot = trt_proteomx[axon_rows, ]
+
+axon_tpm = axon_trt_prot %>% 
+  filter(p.adj_untVStox_TPM < 0.05) %>% 
+  dplyr::select(ensembl_gene_id) %>% 
+  unlist() %>% 
+  as.character()
 
 axon_trt = axon_trt_prot %>% 
   filter(p.adj_untVStox_TrT < 0.05) %>% 
@@ -21,7 +45,7 @@ axon_prot = axon_trt_prot %>%
   as.character()
 
 
-forceLibrary('VennDiagram')
+
 
 # # Chart
 # venn.diagram(
@@ -32,7 +56,7 @@ forceLibrary('VennDiagram')
 # )
 
 venn.diagram(
-  x = list(axon_trt_prot$ensembl_gene_id, axon_trt, axon_prot),
+  x = list(axon_tpm, axon_trt, axon_prot),
   category.names = c("TPM" , "TRT" , "Proteomics"),
   filename = 'axonextension_venn_diagramm.png',
   output=TRUE
