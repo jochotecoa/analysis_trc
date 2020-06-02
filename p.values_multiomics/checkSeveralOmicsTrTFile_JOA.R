@@ -94,8 +94,10 @@ source('functions_JOA.R')
 forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
+if (!exists(comp)) {
+  comp = '5FU'
+}
 
-comp = '5FU'
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
