@@ -94,7 +94,7 @@ source('functions_JOA.R')
 forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
-if (!exists(comp)) {
+if (!exists('comp')) {
   comp = '5FU'
 }
 
@@ -545,23 +545,38 @@ for (cf in all_conf_matrices) {
 
 findCorrected = function(list1, list2){
   fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
-    sum %>% 
-    print
+    list2[['true_positive']][.] 
+  fn_tp %>% length %>% print
   fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
-    sum %>% 
-    print
+    list2[['true_negative']][.] 
+  fp_tn %>% length %>% print
   fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
-    sum %>% 
-    print
+    list1[['true_positive']][.] 
+  fn_tp2 %>% length %>% print
   fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
-    sum %>% 
-    print
-  invisible(return(NULL))
+    list1[['true_negative']][.] 
+  fp_tn2 %>% length %>% print
+  
+  corrected = list(tp_2 = fn_tp, tn_2 = fp_tn, tp_1 = fn_tp2, tn_1 = fp_tn2)
+  
+  return(corrected)
 }
 
-findCorrected(conf_matrix_tpm_theVStox, conf_matrix_trt_theVStox)
-findCorrected(conf_matrix_tpm_untVSthe, conf_matrix_trt_untVSthe)
-findCorrected(conf_matrix_tpm_untVStox, conf_matrix_trt_untVStox)
+corrctd_theVStox = findCorrected(conf_matrix_tpm_theVStox, 
+                                 conf_matrix_trt_theVStox)
+corrctd_untVSthe = findCorrected(conf_matrix_tpm_untVSthe, 
+                                 conf_matrix_trt_untVSthe)
+corrctd_untVStox = findCorrected(conf_matrix_tpm_untVStox,
+                                 conf_matrix_trt_untVStox)
+
+names(corrctd_theVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+names(corrctd_untVSthe) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+names(corrctd_untVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+
+
+
+
+
 
 degs <- function(df, p.val_col, comp = comp) {
   degs_out = df %>% 
