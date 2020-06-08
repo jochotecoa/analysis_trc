@@ -1,26 +1,36 @@
-forceLibrary('VennDiagram')
+library('VennDiagram')
 
-comp = '5FU'
-source('/share/script/hecatos/juantxo/analysis_trc/p.values_multiomics/checkSeveralOmicsTrTFile_JOA.R')
-axon_entrez_genes = read.table(file = '/share/analysis/hecatos/juantxo/Score/analysis/CPDB/gene_sets/GO:0048675    axon extension    (BP level 5)',
-                               header = F, sep = '\t')
+setwd('/share/analysis/hecatos/juantxo/Score/analysis/CPDB/gene_sets/')
 
+geneontologyterm = 'GO:0044295    axonal growth cone    (CC level 4)'
+axon_entrez_genes = read.table(
+  file = geneontologyterm,
+  header = F, sep = '\t')
 colnames(axon_entrez_genes) = c('entrezgene', 'genename')
-mart = openMart2018()
 
-biomaRt::listAttributes(mart) %>% .[, 'name'] %>% subset(., grepl('entrez', .))
+if (!exists('trt_proteomx')) {
+  comp = '5FU'
+  source('/share/script/hecatos/juantxo/analysis_trc/p.values_multiomics/checkSeveralOmicsTrTFile_JOA.R')
+}
 
-ens_entr = biomaRt::getBM(attributes = c("entrezgene", "ensembl_gene_id"), 
-                          filters = "ensembl_gene_id", 
-                          values = trt_proteomx$ensembl_gene_id, 
-                          mart = mart)
+if (!any(grepl('entrez', colnames(trt_proteomx)))) {
+  mart = openMart2018()
+  
+  biomaRt::listAttributes(mart) %>% .[, 'name'] %>% subset(., grepl('entrez', .))
+  
+  ens_entr = biomaRt::getBM(attributes = c("entrezgene", "ensembl_gene_id"), 
+                            filters = "ensembl_gene_id", 
+                            values = trt_proteomx$ensembl_gene_id, 
+                            mart = mart)
+  
+  trt_proteomx = merge.data.frame(x = trt_proteomx, y = ens_entr, 
+                                  by = 'ensembl_gene_id')
+}
 
-trt_proteomx = merge.data.frame(x = trt_proteomx, y = ens_entr, 
-                                by = 'ensembl_gene_id')
 
-axon_degs$user.provided.identifier = axon_degs$user.provided.identifier %>% 
-  as.character %>% 
-  gsub('     ', '', .)
+# axon_entrez_genes$user.provided.identifier = axon_degs$user.provided.identifier %>% 
+#   as.character %>% 
+#   gsub('     ', '', .)
 
 axon_rows = trt_proteomx$entrezgene %in% axon_entrez_genes$entrezgene
 
@@ -55,9 +65,11 @@ axon_prot = axon_trt_prot %>%
 #   output=TRUE
 # )
 
+setwd('vennDiagrams')
+
 venn.diagram(
   x = list(axon_tpm, axon_trt, axon_prot),
   category.names = c("TPM" , "TRT" , "Proteomics"),
-  filename = 'axonextension_venn_diagramm.png',
+  filename = paste0(geneontologyterm, '.png', collapse = ''),
   output=TRUE
 )
