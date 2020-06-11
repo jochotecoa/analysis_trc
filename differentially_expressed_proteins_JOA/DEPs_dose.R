@@ -111,14 +111,16 @@ prot_dir = list.files(pattern = 'Proteomics')
 stopifnot(length(prot_dir) == 1)
 setwd(prot_dir)
 suppressWarnings(rm(proteomx_log2, proteomx_log2_norm))
-if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0) {
+length(list.files(pattern = 'renamed-by-Juan.txt')) == 0
+if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0 & comp == 'PTX') {
   proteomx_log2 = proteomx_log2_norm = 
     read.table('Results_Hecatos_Cardiac_Px_PTX_FC/Cardiac_PTX_log2_norm.txt', 
                sep = '\t', header = T) %>% 
     cleanProtIds() %>% 
     remove_rownames() %>% 
     column_to_rownames('uniprot_gn') %>% 
-    dplyr::select(-Row.Names)
+    dplyr::select(-Row.Names) %>% 
+    filterSamplesBySeqDepth
   # dplyr::select(-X, -contains('.1')) %>% 
   # dplyr::select(contains('PTX')) 
   if (plotting) {
