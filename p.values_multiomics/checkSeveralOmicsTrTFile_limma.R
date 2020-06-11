@@ -1,8 +1,8 @@
  
 # Functions ---------------------------------------------------------------
 transformLogTPM = function(x) {
-  x[is.na.data.frame(x)] = 0.25
-  x[x < 1] = 0.25
+  # x[is.na.data.frame(x)] = 1
+  x = x + 1 #Pseudocounts
   y = log2(x)
 }
 
@@ -123,7 +123,7 @@ forceLibrary(c('dplyr', 'tibble', 'limma', 'edgeR'))
 
 # Get data ----------------------------------------------------------------
 
-comp = 'CEL'
+comp = ''
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
@@ -198,10 +198,12 @@ comp_cas = 12
 # Exceptions
 if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
   trt_df = trt_df %>% dplyr::select(-contains('072_3'))
+  trt_untr = trt_untr %>% dplyr::select(-contains('072_3'))
   comp_cas = 11
 }
 if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
   trt_df = trt_df %>% dplyr::select(-contains('072'))
+  trt_untr = trt_untr %>% dplyr::select(-contains('072'))
   comp_cas = 9
 }
 

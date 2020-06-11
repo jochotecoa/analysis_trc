@@ -94,14 +94,19 @@ source('functions_JOA.R')
 forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
+# Attention! Never run this script one after another in the same R session
+# There's the danger or reusing the variable of one comp onto another
 if (!exists('comp')) {
-  comp = '5FU'
+  comp = 'PTX'
 }
 
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
-setwd('/share/script/hecatos/juantxo/analysis_trc/')
+repo_dir = '/share/script/hecatos/juantxo/analysis_trc/'
+
+# This script will retrieve the DEPs of the compound of choice
+setwd(repo_dir)
 source('differentially_expressed_proteins_JOA/DEPs_dose.R')
 
 setwd('/share/analysis/hecatos/juantxo/Score/output/')
@@ -172,21 +177,26 @@ comp_cas = 12
 # Exceptions
 if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
   trt_df = trt_df %>% dplyr::select(-contains('072_3'))
+  trt_untr = trt_untr %>% dplyr::select(-contains('072_3'))
   comp_cas = 11
 }
 if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
   trt_df = trt_df %>% dplyr::select(-contains('072'))
+  trt_untr = trt_untr %>% dplyr::select(-contains('072'))
   comp_cas = 9
 }
 
+# Add UNTR columns
 trt_comp_untr = merge.data.frame(x = rownames_to_column(trt_df), 
                                  y = rownames_to_column(trt_untr), 
                                  by = 'rowname', all = T) %>% 
   column_to_rownames()
 
+# Filter genes that do not have proteomics expression data
 trt_df_geneid = merge.data.frame(x = rownames_to_column(trt_comp_untr), 
                                  y = dplyr::select(.data = proteomx_biom, 
-                                                   ensembl_transcript_id, ensembl_gene_id), 
+                                                   ensembl_transcript_id, 
+                                                   ensembl_gene_id), 
                                  by.x = 'rowname',
                                  by.y = 'ensembl_transcript_id') #%>% 
 # filter(!duplicated(rowname)) #%>% 
@@ -283,150 +293,18 @@ if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
   trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072'))
 }
 
-# # Correlation ------------------------------------------------------------------
-# 
-# cor_trt_prot = apply_2D(df = dplyr::select(trt_proteomx, starts_with(TrT_miF)),
-#                         FUN = cor.test, complete_cases = comp_cas*2, 
-#                         col.x = 'adsf', col.y = 'asdfa',
-#                         y = dplyr::select(trt_proteomx, starts_with('Proteomics'))) %>%
-#   rownames_to_column() %>%
-#   transmute(estimate.cor_trt = 
-#               as.numeric(as.character(estimate.cor)), rowname) %>%
-#   column_to_rownames()
-# 
-# cor_tpm_prot = apply_2D(df = dplyr::select(trt_proteomx, starts_with('target')),
-#                         FUN = cor.test, complete_cases = comp_cas*2, 
-#                         col.x = 'adsf', col.y = 'asdfa',
-#                         y = dplyr::select(trt_proteomx, starts_with('Proteomics'))) %>%
-#   rownames_to_column() %>%
-#   transmute(estimate.cor_tpm = 
-#               as.numeric(as.character(estimate.cor)), rowname) %>%
-#   column_to_rownames()
-# 
-# trt_proteomx = merge.data.frame(x = rownames_to_column(trt_proteomx),
-#                                 y = rownames_to_column(cor_trt_prot),
-#                                 by = 'rowname', all = T) %>%
-#   merge.data.frame(y = rownames_to_column(cor_tpm_prot), by = 'rowname', 
-#                    all = T) %>%
-#   column_to_rownames()
-# 
-# test = trt_proteomx %>% rownames_to_column() %>%  
-#   filter(estimate.cor_trt > (0.4 + estimate.cor_tpm)) %>% column_to_rownames()
-# 
-# # Minimum > Maximum ------------------------------------------------------------
-# 
-# trt_the_range = trt_proteomx %>% dplyr::select(starts_with(TrT_miF)) %>%
-#   dplyr::select(contains('The')) %>% na.omit() %>% apply(1, range, na.rm = T) %>%
-#   t() %>% as.data.frame() %>% rownames_to_column() %>% 
-#   filter(!is.infinite(V1)) %>% rename(min_the = V1, max_the = V2) %>% 
-#   column_to_rownames()
-# 
-# trt_tox_range = trt_proteomx %>% dplyr::select(starts_with(TrT_miF)) %>%
-#   dplyr::select(contains('Tox')) %>% na.omit() %>% apply(1, range, na.rm = T) %>%
-#   t() %>% as.data.frame() %>% rownames_to_column() %>% 
-#   filter(!is.infinite(V1)) %>% rename(min_tox = V1, max_tox = V2) %>% 
-#   column_to_rownames()
-# 
-# a = merge.data.frame(rownames_to_column(trt_the_range),
-#                      rownames_to_column(trt_tox_range),
-#                      'rowname') %>% column_to_rownames()
-# 
-# b = a[a$min_the > a$max_tox,,F] %>% rownames()
-# test = trt_proteomx[b,,F]
-# 
-# if (plotting) {
-#   trt_proteomx$p.adj_theVStox_TPM %>% 
-#     hist(breaks = seq(0,1,0.05), main = 'TrT', xlab = 'p. adjusted values')
-#   trt_proteomx$p.adj_theVStox_TPM %>% 
-#     hist(breaks = seq(0,1,0.05), main = 'TPM', xlab = 'p. adjusted values')
-#   trt_proteomx$p.adj_prx %>% 
-#     hist(breaks = seq(0,1,0.05), main = 'Proteomics', xlab = 'p. adjusted values')
-# }
-# 
-# 
-# Best cases --------------------------------------------------------------
+
+# Old additional analyses -------------------------------------------------
 
 
-# # VVV
-# vvv = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_tpm > 0.05,
-#     p.value_theVStox_prx < 0.05, 
-#     sign(statistic.t_prx) == sign(statistic.t_trt)
-#   ) %>% 
-#   column_to_rownames()
-# # test %>% nrow() %>% print()
-# 
-# # AAA
-# aaa = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM < 0.05,
-#     p.adj_theVStox_TPM > 0.05,
-#     p.adj_prx < 0.05,
-#     sign(statistic.t_prx) == sign(statistic.t_trt)
-#   ) %>% 
-#   column_to_rownames()
-# 
-
-# # AVV
-# avv = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_tpm > 0.05,
-#     p.value_theVStox_prx < 0.05,
-#     sign(statistic.t_prx) == sign(statistic.t_trt)
-#   ) %>% 
-#   column_to_rownames()
-# 
-# # AVV_bad
-# avv_bad = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_tpm > 0.05,
-#     p.value_theVStox_prx > 0.05,
-#     sign(statistic.t_prx) == sign(statistic.t_trt)
-#   ) %>% 
-#   column_to_rownames()
-
-# # AVA
-# ava = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_tpm > 0.05,
-#     p.adj_prx < 0.05,
-#     sign(statistic.t_prx) == sign(statistic.t_trt)
-#   ) %>% 
-#   column_to_rownames()
-
-# # VAV
-# vav = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM > 0.05,
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_theVStox_prx > 0.05
-#   ) %>% 
-#   column_to_rownames()
-# 
-# # VAV_bad
-# vav_bad = trt_proteomx %>% 
-#   rownames_to_column() %>% 
-#   filter(
-#     p.adj_theVStox_TPM > 0.05,
-#     p.adj_theVStox_TPM < 0.05,
-#     p.value_theVStox_prx < 0.05
-#   ) %>% 
-#   column_to_rownames()
+source(
+  paste0(
+    repo_dir, 'p.values_multiomics/correlation_minimumaximum_bestcases.R'
+    )
+  )
 
 # Sensitivity and Specificity --------------------------------------------------
 
-#### TPM ####
 
 conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
   # Refer to column names stored as strings with the `.data` pronoun:
@@ -543,6 +421,19 @@ for (cf in all_conf_matrices) {
   i = i + 1
 }
 
+for (cf in all_conf_matrices) {
+  all_conf_matrices %>% names() %>% .[i] %>% print()
+  cf_summ = summary(cf)
+  values = cf_summ[, 1] %>% as.numeric()
+  acc = sum(values[1:2]/sum(values))
+  print(acc)
+  i = i + 1
+}
+
+
+# Good cases --------------------------------------------------------------
+
+
 findCorrected = function(list1, list2){
   fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
     list2[['true_positive']][.] 
@@ -575,7 +466,7 @@ names(corrctd_untVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
 
 
 
-
+# Get DEG lists and write them as tables ----------------------------------
 
 
 degs <- function(df, p.val_col, comp = comp) {
@@ -593,79 +484,45 @@ degs <- function(df, p.val_col, comp = comp) {
   return(degs_out)
 }
 
-setwd('~/Desktop/')
-dir.create(comp)
-setwd(comp)
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_theVStox_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
 
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
+ttest_cols = 
+  c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT', 'p.value_theVStox_prx',
+    'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 'p.value_untVSthe_prx',
+    'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT', 'p.value_untVStox_prx')
 
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVSthe_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TPM')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-a = degs(df = trt_proteomx, p.val_col = 'p.adj_untVStox_TrT')
-file_naam = paste0(comp, '_', colnames(a))
-write.table(x = a, file = file_naam, quote = F, 
-            row.names = F, col.names = F)
-
-#### TRT ####
-# test = avv
-
-# colnames(test) = colnames(test) %>% gsub('_TrT', '', .)
-
-if (plotting) {
-  for (rown in rownames(test)) {
-    layout(matrix(c(1,2), 1, 2, byrow = T))
-    row_data = test[rown, ]
-    max_tpm = test[rown, , F] %>% dplyr::select(starts_with('target')) %>% max(na.rm = T)
-    #par(mfrow = c(1, 2))
-    
-    viewPlotProtx(test, rown)
-    
-    readline(prompt = "Press [enter] to continue")
-    
-    plotOmics(df = trt_proteomx, omics = paste0('^', TrT_miF), 
-              transcript = rown, xaxt = 'n', type = 'b', 
-              ylab = 'gray: TPM | black: TrT', xlab = '',
-              ylim = c(0, max_tpm))
-    plotOmics(df = trt_proteomx, omics = '^target', transcript = rown, xaxt = 'n',
-              type = 'b', col = 'gray', yaxt = 'n', xlab = '')
-    axis(1, at = 1:24, labels = colnames(test)[grep('^target', colnames(test))], las = 2)
-    
-    readline(prompt = "Press [enter] to continue")
-    
-    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-    boxplot.dose(row_data, 'Proteomics', main = rown, ylab = 'Proteomics Expression')
-    boxplot.dose(row_data, '^target', main = rown, ylab = 'TPM Expression')
-    boxplot.dose(row_data, TrT_miF, main = rown, ylab = 'TrT Expression')
-    
-    
-    #test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('The')) %>%
-    #  as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-    
-    #  test[rown, , F] %>% dplyr::select(starts_with(TrT_miF)) %>% dplyr::select(contains('Tox')) %>%
-    #   as.numeric() %>% mean(na.rm = T) %>% abline(h = .)
-    # axis(1, at = 1:24, labels = colnames(trt_proteomx)[grep('^target',
-    #colnames(trt_df))], las = 2)
-    readline(prompt = "Press [enter] to continue")
-    
+for (ttest_col in ttest_cols) {
+  setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+  forceSetWd(comp)
+  if (grepl('prx', ttest_col)) {
+    forceSetWd('DEPs')
+  } else {
+    forceSetWd('DEGs')
   }
+  degs_df = degs(df = trt_proteomx, p.val_col = ttest_col)
+  file_naam = paste0(comp, '_', colnames(degs_df))
+  write.table(x = degs_df, file = file_naam, quote = F, 
+              row.names = F, col.names = F)
 }
 
+
+# Write big files ---------------------------------------------------------
+
+
+setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+forceSetWd(comp)
+saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
+write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
+            sep = '\t')
+saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
+write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
+            sep = '\t')
+
+
+# Plotting multiomics expressions (old) -----------------------------------
+
+
+source(
+  paste0(
+    repo_dir, 'p.values_multiomics/plot_multiomics_expressions.R'
+    )
+  )
