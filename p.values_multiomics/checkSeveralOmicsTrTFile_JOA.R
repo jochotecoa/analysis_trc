@@ -186,6 +186,13 @@ if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
   comp_cas = 9
 }
 
+if (any(grepl(pattern = 'CEL|MXT|PTX', x = colnames(trt_df)))) {
+  trt_df = trt_df %>% dplyr::select(-contains('002_3'))
+  trt_untr = trt_untr %>% dplyr::select(-contains('002_3'))
+  comp_cas = 11
+}
+
+
 # Add UNTR columns
 trt_comp_untr = merge.data.frame(x = rownames_to_column(trt_df), 
                                  y = rownames_to_column(trt_untr), 
@@ -221,6 +228,22 @@ theVStox_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',
                                    title = 'theVStox_TPM')
 
 # If it takes 1h, column_to_rownames() #If result.df not found, exchange TrT/TRC
+theVStox_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
+                                   FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
+                                   paired = T, complete_cases = comp_cas, 
+                                   title = 'theVStox_TrT')
+
+# UNTR_002_3 has low sequencing depth, so we cannot compare it to others
+
+if (!any(grepl(pattern = 'Dox|Epi', x = colnames(trt_df)))) {
+  trt_df_geneid = trt_df_geneid %>% dplyr::select(-contains('002_3'))
+  comp_cas = comp_cas - 1
+}
+
+
+
+
+
 untVSthe_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'The', 
                                    paired = T, complete_cases = comp_cas, 
@@ -231,10 +254,6 @@ untVStox_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',
                                    paired = T, complete_cases = comp_cas, 
                                    title = 'untVStox_TPM')
 
-theVStox_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
-                                   FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
-                                   paired = T, complete_cases = comp_cas, 
-                                   title = 'theVStox_TrT')
 
 untVSthe_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'The', 
@@ -421,6 +440,7 @@ for (cf in all_conf_matrices) {
   i = i + 1
 }
 
+i = 1
 for (cf in all_conf_matrices) {
   all_conf_matrices %>% names() %>% .[i] %>% print()
   cf_summ = summary(cf)

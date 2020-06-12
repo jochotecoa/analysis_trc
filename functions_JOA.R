@@ -219,11 +219,12 @@ filterSamplesBySeqDepth = function(df) {
   seq_depth_ratio <- df %>% 
     colSums(na.rm = T) %>% 
     `/` (mean(.)) %>% 
-    log2() %>% 
-    abs() 
-  if (!all(seq_depth_ratio < 2)) {
-    warning(sum(!(seq_depth_ratio < 2)), 
-            ' sample(s) filtered out due to sequencing depth', immediate. = T)
+    log2() 
+  
+  if (!all(seq_depth_ratio > -2)) {
+    warning(sum(!(seq_depth_ratio > -2)), 
+            ' sample(s) filtered out due to sequencing depth ', 
+            names(seq_depth_ratio) [seq_depth_ratio < -2], immediate. = T)
   }
   
   df = df[, seq_depth_ratio < 2]
