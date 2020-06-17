@@ -97,7 +97,7 @@ forceLibrary(c('dplyr', 'tibble'))
 # Attention! Never run this script one after another in the same R session
 # There's the danger of reusing the variable of one comp onto another
 if (!exists('comp')) {
-  comp = 'PTX'
+  comp = 'DOX'
 }
 
 p.value_t.test = 0.001
@@ -521,15 +521,22 @@ if (proteomics) {
 # Get DEG lists and write them as tables ----------------------------------
 
 
-degs <- function(df, p.val_col, comp = comp, p.value = 0.05) {
+degs <- function(df, p.val_col, comp = comp, p.value = 0.05, row.names = T) {
+  
   degs_out = df %>% 
     rownames_to_column() %>% 
     filter(.data[[p.val_col]] < p.value) %>% 
-    arrange(.data[[p.val_col]]) %>% 
-    column_to_rownames() %>% 
-    rownames() %>% 
-    gsub('_.*', '', .) %>% 
-    as.data.frame()
+    arrange(.data[[p.val_col]]) 
+  
+  if (isTRUE(row.names)) {
+    degs_out = column_to_rownames() %>% 
+      rownames() %>% 
+      gsub('_.*', '', .) %>% 
+      as.data.frame()
+  } else {
+    degs_out = degs_out %>% 
+      dplyr::select(!!row.names)
+  }
   
   colnames(degs_out) = p.val_col
   
@@ -554,7 +561,7 @@ if (proteomics) {
       forceSetWd('DEGs')
     }
     degs_df = degs(df = trt_proteomx, p.val_col = ttest_col, 
-                   p.value = p.value_t.test)
+                   p.value = p.value_t.test, rowna)
     file_naam = paste0(comp, '_', colnames(degs_df))
     write.table(x = degs_df, file = file_naam, quote = F, 
                 row.names = F, col.names = F)
@@ -582,8 +589,8 @@ if (proteomics) {
   
 }
 
-barplot(degs_total, las = 2)
-
+barplot(degs_total, las = 2, main = comp, sub = p.value_t.test)
+length(degs_total)
 
 # Write big files ---------------------------------------------------------
 
@@ -600,9 +607,6 @@ if (proteomics) {
               sep = '\t')
   
 } else {
-  saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
-  write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
-              sep = '\t')
   saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
   write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
               sep = '\t')
