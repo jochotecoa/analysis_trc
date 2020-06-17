@@ -227,22 +227,26 @@ mom_untox = median(proteomx_untVStox[, 13], na.rm = T)
 proteomx_untVSthe[, 1:12] = shift_median(proteomx_untVSthe[, 1:12], mom_unthe)
 proteomx_untVStox[, 1:12] = shift_median(proteomx_untVStox[, 1:12], mom_untox)
 
+env_rem = c('theVStox_t.test', 'untVSthe_t.test', 'untVStox_t.test')
 
-rm(theVStox_t.test)
+for (variable in env_rem) {
+  if (exists(variable)) {
+    rm(variable)
+  }
+}
+
 theVStox_t.test = prot_log_norm %>% apply_2D(FUN = t.test, col.x = the_cols, 
                   col.y = tox_cols, paired = T, complete_cases = 12) 
 theVStox_t.test$p.value_theVStox_prx = theVStox_t.test$p.value %>% as.character() %>% as.numeric()
 theVStox_t.test$statistic.t_theVStox_prx = theVStox_t.test$statistic.t %>% as.character() %>% as.numeric()
 if (plotting) {theVStox_t.test$p.value %>% na.omit() %>% hist(breaks = seq(0, 1, 0.05))}
 
-rm(untVSthe_t.test)
 untVSthe_t.test = prot_log_norm %>% apply_2D(FUN = t.test, col.x = 13:24, 
                   col.y = the_cols, paired = T, complete_cases = 12)
 untVSthe_t.test$p.value_untVSthe_prx = untVSthe_t.test$p.value %>% as.character() %>% as.numeric()
 untVSthe_t.test$statistic.t_untVSthe_prx = untVSthe_t.test$statistic.t %>% as.character() %>% as.numeric()
 if (plotting) {untVSthe_t.test$p.value %>% na.omit() %>% hist(breaks = seq(0, 1, 0.05))}
 
-rm(untVStox_t.test)
 untVStox_t.test = prot_log_norm %>% apply_2D(FUN = t.test, col.x = 13:24, 
                   col.y = tox_cols, paired = T, complete_cases = 12)
 untVStox_t.test$p.value_untVStox_prx = untVStox_t.test$p.value %>% as.character() %>% as.numeric()

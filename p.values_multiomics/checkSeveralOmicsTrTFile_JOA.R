@@ -95,19 +95,24 @@ forceLibrary(c('dplyr', 'tibble'))
 
 # Get data ----------------------------------------------------------------
 # Attention! Never run this script one after another in the same R session
-# There's the danger or reusing the variable of one comp onto another
+# There's the danger of reusing the variable of one comp onto another
 if (!exists('comp')) {
   comp = 'PTX'
 }
 
+p.value_t.test = 0.001
+proteomics = F
 plotting = F
 miRNA_factor = 0.1
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
 repo_dir = '/share/script/hecatos/juantxo/analysis_trc/'
 
-# This script will retrieve the DEPs of the compound of choice
-setwd(repo_dir)
-source('differentially_expressed_proteins_JOA/DEPs_dose.R')
+if (proteomics) {
+  # This script will retrieve the DEPs of the compound of choice
+  setwd(repo_dir)
+  source('differentially_expressed_proteins_JOA/DEPs_dose.R')
+  
+}
 
 setwd('/share/analysis/hecatos/juantxo/Score/output/')
 setwd(comp)
@@ -115,7 +120,8 @@ setwd(comp)
 list.files(pattern = 'factor_0_1') %>% sort(decreasing = T) %>% setwd()
 # 
 all_file = list.files(pattern = 'All_trt|all_trt')
-rm(trt_df)
+if (exists('trt_df')) {rm(trt_df)}
+
 # common_trt_df = mergeFiles(files_patt = TrT_miF, row_names = T, progr_bar = F)
 if (length(all_file) == 0) {
   if (sum(grepl(pattern = 'rds', x = list.files()))) {
@@ -200,14 +206,37 @@ trt_comp_untr = merge.data.frame(x = rownames_to_column(trt_df),
   column_to_rownames()
 
 # Filter genes that do not have proteomics expression data
-trt_df_geneid = merge.data.frame(x = rownames_to_column(trt_comp_untr), 
-                                 y = dplyr::select(.data = proteomx_biom, 
-                                                   ensembl_transcript_id, 
-                                                   ensembl_gene_id), 
-                                 by.x = 'rowname',
-                                 by.y = 'ensembl_transcript_id') #%>% 
-# filter(!duplicated(rowname)) #%>% 
-# column_to_rownames()
+if (proteomics) {
+  trt_df_geneid = merge.data.frame(x = rownames_to_column(trt_comp_untr), 
+                                   y = dplyr::select(.data = proteomx_biom, 
+                                                     ensembl_transcript_id, 
+                                                     ensembl_gene_id), 
+                                   by.x = 'rowname',
+                                   by.y = 'ensembl_transcript_id') #%>% 
+  # filter(!duplicated(rowname)) #%>% 
+  # column_to_rownames()
+  
+} else {
+  
+  mart = openMart2018()
+  
+  biomart_table = biomaRt::getBM(attributes = c('transcript_biotype', 
+                                                'uniprotswissprot', 
+                                                "ensembl_gene_id", 
+                                                "external_gene_name",
+                                                "ensembl_transcript_id"), 
+                                 filters = 'ensembl_transcript_id', 
+                                 values = rownames(trt_comp_untr), mart = mart) %>% 
+    dplyr::filter(transcript_biotype == 'protein_coding')
+  
+  
+  trt_df_geneid = merge.data.frame(x = rownames_to_column(trt_comp_untr), 
+                                   y = biomart_table, 
+                                   by.x = 'rowname', 
+                                   by.y = 'ensembl_transcript_id') %>% 
+    rename(ensembl_transcript_id = rowname) %>% 
+    rownames_to_column
+}
 
 
 
@@ -282,217 +311,220 @@ trt_df_t.tests = merge.data.frame(x = rownames_to_column(trt_df_geneid),
 
 # Combine transcrx and protx ----------------------------------------------
 
-proteomx_biom_filt = proteomx_biom %>% 
-  mutate(id = paste0(ensembl_gene_id, '_', uniprotswissprot)) %>%
-  .[!duplicated(.[, 'id']), ] %>% 
-  dplyr::select(-c(id, rowname))
-
-trt_proteomx = merge.data.frame(x = rownames_to_column(trt_df_t.tests), 
-                                y = dplyr::select(.data = proteomx_biom_filt, 
-                                                  -ensembl_transcript_id), 
-                                by.x = 'rowname',
-                                by.y = 'ensembl_gene_id') %>% 
-  mutate(rowname = paste0(rowname, '_', uniprotswissprot)) %>%
-  column_to_rownames()
-
-trt_proteomx$ensembl_gene_id = trt_proteomx %>% 
-  rownames() %>% 
-  gsub('_.*', '', .)
-# rename(p.value_theVStox_prx = p.value, 
-#        p.adj_prx = p.adj) %>% 
-# mutate(p.adj_theVStox_TPM = p.adjust(p.adj_theVStox_TPM, method = 'BH'), 
-#        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
-# # filter(!duplicated(rowname)) %>% 
-# column_to_rownames()
-
-if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
-  trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072_3'))
-}
-if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
-  trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072'))
-}
-
-
-# Old additional analyses -------------------------------------------------
-
-
-source(
-  paste0(
-    repo_dir, 'p.values_multiomics/correlation_minimumaximum_bestcases.R'
+if (proteomics) {
+  proteomx_biom_filt = proteomx_biom %>% 
+    mutate(id = paste0(ensembl_gene_id, '_', uniprotswissprot)) %>%
+    .[!duplicated(.[, 'id']), ] %>% 
+    dplyr::select(-c(id, rowname))
+  
+  trt_proteomx = merge.data.frame(x = rownames_to_column(trt_df_t.tests), 
+                                  y = dplyr::select(.data = proteomx_biom_filt, 
+                                                    -ensembl_transcript_id), 
+                                  by.x = 'rowname',
+                                  by.y = 'ensembl_gene_id') %>% 
+    mutate(rowname = paste0(rowname, '_', uniprotswissprot)) %>%
+    column_to_rownames()
+  
+  trt_proteomx$ensembl_gene_id = trt_proteomx %>% 
+    rownames() %>% 
+    gsub('_.*', '', .)
+  # rename(p.value_theVStox_prx = p.value, 
+  #        p.adj_prx = p.adj) %>% 
+  # mutate(p.adj_theVStox_TPM = p.adjust(p.adj_theVStox_TPM, method = 'BH'), 
+  #        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
+  # # filter(!duplicated(rowname)) %>% 
+  # column_to_rownames()
+  
+  if (any(grepl(pattern = 'Dox', x = colnames(trt_df)))) {
+    trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072_3'))
+  }
+  if (any(grepl(pattern = 'Epi', x = colnames(trt_df)))) {
+    trt_proteomx = trt_proteomx %>% dplyr::select(-contains('072'))
+  }
+  
+  
+  # Old additional analyses -------------------------------------------------
+  
+  
+  source(
+    paste0(
+      repo_dir, 'p.values_multiomics/correlation_minimumaximum_bestcases.R'
     )
   )
-
-# Sensitivity and Specificity --------------------------------------------------
-
-
-conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
-  # Refer to column names stored as strings with the `.data` pronoun:
-  tp = df %>%
-    rownames_to_column() %>%
-    filter(
-      .data[[pred[[1]]]] < 0.05,
-      .data[[true[[1]]]] < 0.05,
-      sign(.data[[dir_pred[[1]]]]) == sign(.data[[dir_true[[1]]]])
-    ) %>% 
-    column_to_rownames() %>% 
-    rownames()
   
-  tn = df %>%
-    rownames_to_column() %>%
-    filter(
-      .data[[pred[[1]]]] > 0.05,
-      .data[[true[[1]]]] > 0.05
-    ) %>% 
-    column_to_rownames() %>% 
-    rownames()
+  # Sensitivity and Specificity --------------------------------------------------
   
-  fp1 = df %>%
-    rownames_to_column() %>%
-    filter(
-      .data[[pred[[1]]]] < 0.05,
-      .data[[true[[1]]]] > 0.05
-    ) %>% 
-    column_to_rownames() %>% 
-    rownames() 
   
-  fp2 =  df %>%
-    rownames_to_column() %>%
-    filter(
-      .data[[pred[[1]]]] < 0.05,
-      .data[[true[[1]]]] < 0.05,
-      sign(.data[[dir_pred[[1]]]]) != sign(.data[[dir_true[[1]]]])
-    ) %>% 
-    column_to_rownames() %>% 
-    rownames()
+  conf_matrix <- function(df, pred, true, dir_pred, dir_true) {
+    # Refer to column names stored as strings with the `.data` pronoun:
+    tp = df %>%
+      rownames_to_column() %>%
+      filter(
+        .data[[pred[[1]]]] < 0.05,
+        .data[[true[[1]]]] < 0.05,
+        sign(.data[[dir_pred[[1]]]]) == sign(.data[[dir_true[[1]]]])
+      ) %>% 
+      column_to_rownames() %>% 
+      rownames()
+    
+    tn = df %>%
+      rownames_to_column() %>%
+      filter(
+        .data[[pred[[1]]]] > 0.05,
+        .data[[true[[1]]]] > 0.05
+      ) %>% 
+      column_to_rownames() %>% 
+      rownames()
+    
+    fp1 = df %>%
+      rownames_to_column() %>%
+      filter(
+        .data[[pred[[1]]]] < 0.05,
+        .data[[true[[1]]]] > 0.05
+      ) %>% 
+      column_to_rownames() %>% 
+      rownames() 
+    
+    fp2 =  df %>%
+      rownames_to_column() %>%
+      filter(
+        .data[[pred[[1]]]] < 0.05,
+        .data[[true[[1]]]] < 0.05,
+        sign(.data[[dir_pred[[1]]]]) != sign(.data[[dir_true[[1]]]])
+      ) %>% 
+      column_to_rownames() %>% 
+      rownames()
+    
+    fp = c(fp1, fp2)
+    
+    fn = df %>%
+      rownames_to_column() %>%
+      filter(
+        .data[[pred[[1]]]] > 0.05,
+        .data[[true[[1]]]] < 0.05
+      ) %>% 
+      column_to_rownames() %>% 
+      rownames() 
+    
+    conf_matr = list(true_positive = tp,
+                     true_negative = tn,
+                     false_positive = fp,
+                     false_negative = fn)
+    
+    return(conf_matr)
+  }
+  # Therapeutic versus Toxic
+  conf_matrix_tpm_theVStox = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_theVStox_TPM', 
+                                         true='p.value_theVStox_prx', 
+                                         dir_pred='statistic.t_theVStox_TPM', 
+                                         dir_true='statistic.t_theVStox_prx')
   
-  fp = c(fp1, fp2)
+  conf_matrix_trt_theVStox = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_theVStox_TrT', 
+                                         true='p.value_theVStox_prx', 
+                                         dir_pred='statistic.t_theVStox_TrT', 
+                                         dir_true='statistic.t_theVStox_prx')
   
-  fn = df %>%
-    rownames_to_column() %>%
-    filter(
-      .data[[pred[[1]]]] > 0.05,
-      .data[[true[[1]]]] < 0.05
-    ) %>% 
-    column_to_rownames() %>% 
-    rownames() 
+  # Untreated vs Therapeutic
   
-  conf_matr = list(true_positive = tp,
-                   true_negative = tn,
-                   false_positive = fp,
-                   false_negative = fn)
+  conf_matrix_tpm_untVSthe = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_untVSthe_TPM', 
+                                         true='p.value_untVSthe_prx', 
+                                         dir_pred='statistic.t_untVSthe_TPM', 
+                                         dir_true='statistic.t_untVSthe_prx')
   
-  return(conf_matr)
+  conf_matrix_trt_untVSthe = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_untVSthe_TrT', 
+                                         true='p.value_untVSthe_prx', 
+                                         dir_pred='statistic.t_untVSthe_TrT', 
+                                         dir_true='statistic.t_untVSthe_prx')
+  
+  # Untreated vs Toxic
+  
+  conf_matrix_tpm_untVStox = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_untVStox_TPM', 
+                                         true='p.value_untVStox_prx', 
+                                         dir_pred='statistic.t_untVStox_TPM', 
+                                         dir_true='statistic.t_untVStox_prx')
+  
+  conf_matrix_trt_untVStox = conf_matrix(df=trt_proteomx,
+                                         pred= 'p.adj_untVStox_TrT', 
+                                         true='p.value_untVStox_prx', 
+                                         dir_pred='statistic.t_untVStox_TrT', 
+                                         dir_true='statistic.t_untVStox_prx')
+  
+  # List of lists
+  
+  all_conf_matrices = list(conf_matrix_trt_theVStox = conf_matrix_trt_theVStox,
+                           conf_matrix_tpm_theVStox = conf_matrix_tpm_theVStox,
+                           conf_matrix_trt_untVSthe = conf_matrix_trt_untVSthe,
+                           conf_matrix_tpm_untVSthe = conf_matrix_tpm_untVSthe, 
+                           conf_matrix_trt_untVStox = conf_matrix_trt_untVStox,
+                           conf_matrix_tpm_untVStox = conf_matrix_tpm_untVStox)
+  
+  i = 1
+  for (cf in all_conf_matrices) {
+    all_conf_matrices %>% names() %>% .[i] %>% print()
+    print(summary(cf))
+    i = i + 1
+  }
+  
+  i = 1
+  for (cf in all_conf_matrices) {
+    all_conf_matrices %>% names() %>% .[i] %>% print()
+    cf_summ = summary(cf)
+    values = cf_summ[, 1] %>% as.numeric()
+    acc = sum(values[1:2]/sum(values))
+    print(acc)
+    i = i + 1
+  }
+  
+  
+  # Good cases --------------------------------------------------------------
+  
+  
+  findCorrected = function(list1, list2){
+    fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
+      list2[['true_positive']][.] 
+    fn_tp %>% length %>% print
+    fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
+      list2[['true_negative']][.] 
+    fp_tn %>% length %>% print
+    fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
+      list1[['true_positive']][.] 
+    fn_tp2 %>% length %>% print
+    fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
+      list1[['true_negative']][.] 
+    fp_tn2 %>% length %>% print
+    
+    corrected = list(tp_2 = fn_tp, tn_2 = fp_tn, tp_1 = fn_tp2, tn_1 = fp_tn2)
+    
+    return(corrected)
+  }
+  
+  corrctd_theVStox = findCorrected(conf_matrix_tpm_theVStox, 
+                                   conf_matrix_trt_theVStox)
+  corrctd_untVSthe = findCorrected(conf_matrix_tpm_untVSthe, 
+                                   conf_matrix_trt_untVSthe)
+  corrctd_untVStox = findCorrected(conf_matrix_tpm_untVStox,
+                                   conf_matrix_trt_untVStox)
+  
+  names(corrctd_theVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+  names(corrctd_untVSthe) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+  names(corrctd_untVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
+  
+  
+  
+  
 }
-# Therapeutic versus Toxic
-conf_matrix_tpm_theVStox = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_theVStox_TPM', 
-                                       true='p.value_theVStox_prx', 
-                                       dir_pred='statistic.t_theVStox_TPM', 
-                                       dir_true='statistic.t_theVStox_prx')
-
-conf_matrix_trt_theVStox = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_theVStox_TrT', 
-                                       true='p.value_theVStox_prx', 
-                                       dir_pred='statistic.t_theVStox_TrT', 
-                                       dir_true='statistic.t_theVStox_prx')
-
-# Untreated vs Therapeutic
-
-conf_matrix_tpm_untVSthe = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_untVSthe_TPM', 
-                                       true='p.value_untVSthe_prx', 
-                                       dir_pred='statistic.t_untVSthe_TPM', 
-                                       dir_true='statistic.t_untVSthe_prx')
-
-conf_matrix_trt_untVSthe = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_untVSthe_TrT', 
-                                       true='p.value_untVSthe_prx', 
-                                       dir_pred='statistic.t_untVSthe_TrT', 
-                                       dir_true='statistic.t_untVSthe_prx')
-
-# Untreated vs Toxic
-
-conf_matrix_tpm_untVStox = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_untVStox_TPM', 
-                                       true='p.value_untVStox_prx', 
-                                       dir_pred='statistic.t_untVStox_TPM', 
-                                       dir_true='statistic.t_untVStox_prx')
-
-conf_matrix_trt_untVStox = conf_matrix(df=trt_proteomx,
-                                       pred= 'p.adj_untVStox_TrT', 
-                                       true='p.value_untVStox_prx', 
-                                       dir_pred='statistic.t_untVStox_TrT', 
-                                       dir_true='statistic.t_untVStox_prx')
-
-# List of lists
-
-all_conf_matrices = list(conf_matrix_trt_theVStox = conf_matrix_trt_theVStox,
-                         conf_matrix_tpm_theVStox = conf_matrix_tpm_theVStox,
-                         conf_matrix_trt_untVSthe = conf_matrix_trt_untVSthe,
-                         conf_matrix_tpm_untVSthe = conf_matrix_tpm_untVSthe, 
-                         conf_matrix_trt_untVStox = conf_matrix_trt_untVStox,
-                         conf_matrix_tpm_untVStox = conf_matrix_tpm_untVStox)
-
-i = 1
-for (cf in all_conf_matrices) {
-  all_conf_matrices %>% names() %>% .[i] %>% print()
-  print(summary(cf))
-  i = i + 1
-}
-
-i = 1
-for (cf in all_conf_matrices) {
-  all_conf_matrices %>% names() %>% .[i] %>% print()
-  cf_summ = summary(cf)
-  values = cf_summ[, 1] %>% as.numeric()
-  acc = sum(values[1:2]/sum(values))
-  print(acc)
-  i = i + 1
-}
-
-
-# Good cases --------------------------------------------------------------
-
-
-findCorrected = function(list1, list2){
-  fn_tp = list2[['true_positive']] %in% list1[['false_negative']] %>% 
-    list2[['true_positive']][.] 
-  fn_tp %>% length %>% print
-  fp_tn = list2[['true_negative']] %in% list1[['false_positive']] %>% 
-    list2[['true_negative']][.] 
-  fp_tn %>% length %>% print
-  fn_tp2 = list1[['true_positive']] %in% list2[['false_negative']] %>% 
-    list1[['true_positive']][.] 
-  fn_tp2 %>% length %>% print
-  fp_tn2 = list1[['true_negative']] %in% list2[['false_positive']] %>% 
-    list1[['true_negative']][.] 
-  fp_tn2 %>% length %>% print
-  
-  corrected = list(tp_2 = fn_tp, tn_2 = fp_tn, tp_1 = fn_tp2, tn_1 = fp_tn2)
-  
-  return(corrected)
-}
-
-corrctd_theVStox = findCorrected(conf_matrix_tpm_theVStox, 
-                                 conf_matrix_trt_theVStox)
-corrctd_untVSthe = findCorrected(conf_matrix_tpm_untVSthe, 
-                                 conf_matrix_trt_untVSthe)
-corrctd_untVStox = findCorrected(conf_matrix_tpm_untVStox,
-                                 conf_matrix_trt_untVStox)
-
-names(corrctd_theVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
-names(corrctd_untVSthe) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
-names(corrctd_untVStox) = c('tp_trt', 'tn_trt', 'tp_tpm', 'tn_tpm')
-
-
-
 # Get DEG lists and write them as tables ----------------------------------
 
 
-degs <- function(df, p.val_col, comp = comp) {
+degs <- function(df, p.val_col, comp = comp, p.value = 0.05) {
   degs_out = df %>% 
     rownames_to_column() %>% 
-    filter(.data[[p.val_col]] < 0.05) %>% 
+    filter(.data[[p.val_col]] < p.value) %>% 
     arrange(.data[[p.val_col]]) %>% 
     column_to_rownames() %>% 
     rownames() %>% 
@@ -504,25 +536,53 @@ degs <- function(df, p.val_col, comp = comp) {
   return(degs_out)
 }
 
+degs_total = NULL
 
-ttest_cols = 
-  c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT', 'p.value_theVStox_prx',
-    'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 'p.value_untVSthe_prx',
-    'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT', 'p.value_untVStox_prx')
-
-for (ttest_col in ttest_cols) {
-  setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
-  forceSetWd(comp)
-  if (grepl('prx', ttest_col)) {
-    forceSetWd('DEPs')
-  } else {
-    forceSetWd('DEGs')
+if (proteomics) {
+  ttest_cols = 
+    c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT', 'p.value_theVStox_prx',
+      'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 'p.value_untVSthe_prx',
+      'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT', 'p.value_untVStox_prx')
+  
+  for (ttest_col in ttest_cols) {
+    setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+    forceSetWd(comp)
+    forceSetWd('filtered_by_protx')
+    if (grepl('prx', ttest_col)) {
+      forceSetWd('DEPs')
+    } else {
+      forceSetWd('DEGs')
+    }
+    degs_df = degs(df = trt_proteomx, p.val_col = ttest_col, 
+                   p.value = p.value_t.test)
+    file_naam = paste0(comp, '_', colnames(degs_df))
+    write.table(x = degs_df, file = file_naam, quote = F, 
+                row.names = F, col.names = F)
   }
-  degs_df = degs(df = trt_proteomx, p.val_col = ttest_col)
-  file_naam = paste0(comp, '_', colnames(degs_df))
-  write.table(x = degs_df, file = file_naam, quote = F, 
-              row.names = F, col.names = F)
+  
+} else {
+  ttest_cols = 
+    c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT',
+      'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 
+      'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT')
+  
+  for (ttest_col in ttest_cols) {
+    setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+    forceSetWd(comp)
+    forceSetWd('DEGs')
+    degs_df = degs(df = trt_df_t.tests, p.val_col = ttest_col, 
+                   p.value = p.value_t.test)
+    file_naam = paste0(comp, '_', colnames(degs_df))
+    write.table(x = degs_df, file = file_naam, quote = F, 
+                row.names = F, col.names = F)
+    
+    degs_total = c(degs_total, nrow(degs_df))
+    names(degs_total)[length(degs_total)] = file_naam
+  }
+  
 }
+
+barplot(degs_total, las = 2)
 
 
 # Write big files ---------------------------------------------------------
@@ -530,12 +590,24 @@ for (ttest_col in ttest_cols) {
 
 setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
 forceSetWd(comp)
-saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
-write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
-            sep = '\t')
-saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
-write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
-            sep = '\t')
+if (proteomics) {
+  forceSetWd('filtered_by_protx')
+  saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
+  write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
+              sep = '\t')
+  saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
+  write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
+              sep = '\t')
+  
+} else {
+  saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
+  write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
+              sep = '\t')
+  saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
+  write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
+              sep = '\t')
+  
+}
 
 
 # Plotting multiomics expressions (old) -----------------------------------

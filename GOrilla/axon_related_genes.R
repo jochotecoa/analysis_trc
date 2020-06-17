@@ -1,4 +1,4 @@
-compare_boxpl <- function(df, attrib, cols.x, cols.y) {
+compare_boxpl <- function(df, attrib = NULL, cols.x, cols.y, ...) {
   if (!is.null(attrib)) {
     gene_trt = df %>% 
       dplyr::select(starts_with(attrib))
@@ -18,9 +18,15 @@ compare_boxpl <- function(df, attrib, cols.x, cols.y) {
     unlist()
   
   newdf = cbind.data.frame(gene_trt_untr, gene_trt_tox)
-  colnames(newdf) = c(paste0(cols.x, attrib), paste0(cols.y, attrib))
+  if (is.null(attrib)) {
+    colnames(newdf) = c(paste0(cols.x, attrib), paste0(cols.y, attrib))
+  } else {
+    colnames(newdf) = c(paste0(cols.x, '_', attrib), 
+                        paste0(cols.y, '_', attrib))
+    
+  }
   boxplot(newdf, 
-          ylim = c(0, max_y))
+          ylim = c(0, max_y), ...)
   
 }
 subSet = function(x, pattern) {
@@ -46,22 +52,14 @@ gene_details = trt_proteomx %>%
   filter(external_gene_name == 'PAFAH1B1')
 
 
-# TPM ---------------------------------------------------------------------
 
-compare_boxpl(gene_details, 'targetRNA_TPM_')
-# TRT ---------------------------------------------------------------------
+# Check attributes on TrT table -------------------------------------------
 
-compare_boxpl(gene_details, 'TrT_0.1_')
 
-# miRNA regulation --------------------------------------------------------
+compare_boxpl(gene_details, 'targetRNA_TPM_', cols.x = 'UNTR', cols.y = 'Tox')
+compare_boxpl(gene_details, 'TrT_0.1_', cols.x = 'UNTR', cols.y = 'Tox')
 
-par(mfrow = c(3, 2))
 
-compare_boxpl(gene_details, 'sum_miRNA_TPM', 'UNTR', 'Tox')
-
-compare_boxpl(gene_details, 'X.miRNAs')
-
-compare_boxpl(gene_details, 'E_circ_N')
 
 atts = gene_details %>% 
   dplyr::select(contains('UNTR_072_1')) %>% 
@@ -71,10 +69,13 @@ atts = gene_details %>%
 
 for (variable in atts) {
   
-  compare_boxpl(gene_details, variable)
+  compare_boxpl(gene_details, variable, cols.x = 'UNTR', cols.y = 'Tox')
   
   readline(prompt="Press [enter] to continue")
 }
+
+
+# Which miRNAs are contrasted to have an effect ---------------------------
 
 
 setwd('~/Downloads')
@@ -129,8 +130,15 @@ mirnas_related_exp_UNTR = mirna_UNTR[rows_exp, ] %>%
 
 mirnas_related_exp = merge.data.frame(mirnas_related_exp_UNTR, 
                                       mirnas_related_exp_5FU, 
-                                      by = 'miRNA')
+                                      by = 'miRNA') %>% 
+  column_to_rownames('miRNA')
 
 
 
-compare_boxpl(mirnas_related_exp, cols.x = 'UNTR')
+for (variable in rownames(mirnas_related_exp)) {
+  df = mirnas_related_exp[variable,,F]
+  compare_boxpl(df, cols.x = 'UNTR', cols.y = 'Tox', main = variable)
+  readline(prompt="Press [enter] to continue")
+  
+}
+
