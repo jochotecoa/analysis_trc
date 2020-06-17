@@ -162,8 +162,8 @@ if (length(list.files(pattern = 'renamed-by-Juan.txt')) == 0 & comp == 'PTX') {
   }
   
   try(write.table(x = proteomx_log2, 
-              file = 
-                'Hecatos_Cardiac_Px_PTX_Ther_Tox_log2_norm-renamed-by-Juan.txt'))
+              file = 'Hecatos_Cardiac_Px_PTX_Ther_Tox_log2_norm-renamed-by-Juan.txt'), 
+      silent = T)
   
 } else {
   proteomx_log2 = 
