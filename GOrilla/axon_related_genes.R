@@ -41,17 +41,18 @@ forceLibrary(c('dplyr', 'tibble'))
 
 
 
-if (!exists('trt_proteomx')) {
+if (!exists('trt_df')) {
   comp = '5FU'
   source('/share/script/hecatos/juantxo/analysis_trc/p.values_multiomics/checkSeveralOmicsTrTFile_JOA.R')
 }
 
 forceSetWd('/share/analysis/hecatos/juantxo/Score/analysis/GOrilla')
 
-gene_details = trt_proteomx %>% 
-  filter(external_gene_name == 'PAFAH1B1')
+gene_details = trt_df_geneid %>% 
+  rownames_to_column() %>% 
+  filter(rowname == 'ENSG00000099250')
 
-
+dim(gene_details)
 
 # Check attributes on TrT table -------------------------------------------
 
