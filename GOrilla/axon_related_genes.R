@@ -41,25 +41,35 @@ forceLibrary(c('dplyr', 'tibble'))
 
 
 
-if (!exists('trt_df')) {
+if (!exists('trt_df_geneid')) {
   comp = '5FU'
   source('/share/script/hecatos/juantxo/analysis_trc/p.values_multiomics/checkSeveralOmicsTrTFile_JOA.R')
 }
+
+
+# Find gene of interest ---------------------------------------------------
+
+
 
 forceSetWd('/share/analysis/hecatos/juantxo/Score/analysis/GOrilla')
 
 gene_details = trt_df_geneid %>% 
   rownames_to_column() %>% 
-  filter(rowname == 'ENSG00000099250')
+  filter(rowname == 'ENSG00000196923')
 
 dim(gene_details)
 
-# Check attributes on TrT table -------------------------------------------
 
+# Check expression levels -------------------------------------------------
+
+
+
+par(mfrow = c(1, 2))
 
 compare_boxpl(gene_details, 'targetRNA_TPM_', cols.x = 'UNTR', cols.y = 'Tox')
 compare_boxpl(gene_details, 'TrT_0.1_', cols.x = 'UNTR', cols.y = 'Tox')
 
+# Check attributes on TrT table -------------------------------------------
 
 
 atts = gene_details %>% 
