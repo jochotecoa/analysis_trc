@@ -137,6 +137,11 @@ if (!exists('pseudocounts_ttest')) {
   pseudocounts_ttest = T
 }
 
+if (!exists('save.files')) {
+  save.files = F
+}
+
+
 
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
 repo_dir = '/share/script/hecatos/juantxo/analysis_trc/'
@@ -571,124 +576,129 @@ if (proteomics) {
 }
 # Get DEG lists and write them as tables ----------------------------------
 
-
-degs <- function(df, p.val_col, comp = comp, p.value = 0.05, rnames = T) {
-  
-  degs_out = df %>% 
-    rownames_to_column() %>% 
-    filter(.data[[p.val_col]] < p.value) %>% 
-    arrange(.data[[p.val_col]]) 
-  if (nrow(degs_out) > 0) {
-    if (isTRUE(rnames)) {
-      degs_out = degs_out %>% 
-        column_to_rownames() %>% 
-        rownames() %>% 
-        gsub('_.*', '', .) %>% 
-        as.data.frame()
+if (save.files) {
+  degs <- function(df, p.val_col, comp = comp, p.value = 0.05, rnames = T) {
+    
+    degs_out = df %>% 
+      rownames_to_column() %>% 
+      filter(.data[[p.val_col]] < p.value) %>% 
+      arrange(.data[[p.val_col]]) 
+    if (nrow(degs_out) > 0) {
+      if (isTRUE(rnames)) {
+        degs_out = degs_out %>% 
+          column_to_rownames() %>% 
+          rownames() %>% 
+          gsub('_.*', '', .) %>% 
+          as.data.frame()
+      } else {
+        degs_out = degs_out %>% 
+          dplyr::select(!!rnames)
+      }
+      
+      colnames(degs_out) = p.val_col
+      
     } else {
-      degs_out = degs_out %>% 
-        dplyr::select(!!rnames)
+      degs_out = data.frame()
     }
     
-    colnames(degs_out) = p.val_col
-    
-  } else {
-    degs_out = data.frame()
+    return(degs_out)
   }
   
-  return(degs_out)
-}
-
-degs_all = NULL
-
-for (p.value_t.test in c(0.05, 0.01, 0.001)) {
-  degs_total = NULL
+  degs_all = NULL
   
-  if (proteomics) {
-    ttest_cols = 
-      c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT', 'p.value_theVStox_prx',
-        'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 'p.value_untVSthe_prx',
-        'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT', 'p.value_untVStox_prx')
+  for (p.value_t.test in c(0.05, 0.01, 0.001)) {
+    degs_total = NULL
     
-    for (ttest_col in ttest_cols) {
-      setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
-      forceSetWd(comp)
-      forceSetWd('filtered_by_protx')
+    if (proteomics) {
+      ttest_cols = 
+        c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT', 'p.value_theVStox_prx',
+          'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 'p.value_untVSthe_prx',
+          'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT', 'p.value_untVStox_prx')
       
-      if (grepl('prx', ttest_col)) {
-        forceSetWd('DEPs')
+      for (ttest_col in ttest_cols) {
+        setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+        forceSetWd(comp)
+        forceSetWd('filtered_by_protx')
         
-      } else {
-        forceSetWd('DEGs')
-      }
-      degs_df = degs(df = trt_proteomx, p.val_col = ttest_col, 
-                     p.value = p.value_t.test, rowna)
-      file_naam = paste0(comp, '_', colnames(degs_df))
-      write.table(x = degs_df, file = file_naam, quote = F, 
-                  row.names = F, col.names = F)
-    }
-    
-  } else {
-    ttest_cols = 
-      c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT',
-        'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 
-        'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT')
-    
-    for (ttest_col in ttest_cols) {
-      setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
-      forceSetWd(comp)
-      forceSetWd('DEGs')
-      forceSetWd(paste0('p.value_', p.value_t.test))
-      degs_df = degs(df = trt_df_t.tests, p.val_col = ttest_col, 
-                     p.value = p.value_t.test)
-      
-      if (nrow(degs_df) > 0) {
+        if (grepl('prx', ttest_col)) {
+          forceSetWd('DEPs')
+          
+        } else {
+          forceSetWd('DEGs')
+        }
+        degs_df = degs(df = trt_proteomx, p.val_col = ttest_col, 
+                       p.value = p.value_t.test, rowna)
         file_naam = paste0(comp, '_', colnames(degs_df))
         write.table(x = degs_df, file = file_naam, quote = F, 
                     row.names = F, col.names = F)
-        degs_total = c(degs_total, nrow(degs_df))
-        names(degs_total)[length(degs_total)] = file_naam
       }
+      
+    } else {
+      ttest_cols = 
+        c('p.adj_theVStox_TPM', 'p.adj_theVStox_TrT',
+          'p.adj_untVSthe_TPM', 'p.adj_untVSthe_TrT', 
+          'p.adj_untVStox_TPM', 'p.adj_untVStox_TrT')
+      
+      for (ttest_col in ttest_cols) {
+        setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+        forceSetWd(comp)
+        forceSetWd('DEGs')
+        forceSetWd(paste0('p.value_', p.value_t.test))
+        degs_df = degs(df = trt_df_t.tests, p.val_col = ttest_col, 
+                       p.value = p.value_t.test)
+        
+        if (nrow(degs_df) > 0) {
+          file_naam = paste0(comp, '_', colnames(degs_df))
+          write.table(x = degs_df, file = file_naam, quote = F, 
+                      row.names = F, col.names = F)
+          degs_total = c(degs_total, nrow(degs_df))
+          names(degs_total)[length(degs_total)] = file_naam
+        }
+      }
+      
     }
+    
+    print(p.value_t.test)
+    print(max(degs_total))
+    
+    degs_all = c(degs_all, max(degs_total))
+    names(degs_all)[length(degs_all)] = p.value_t.test
     
   }
   
-  print(p.value_t.test)
-  print(max(degs_total))
   
-  degs_all = c(degs_all, max(degs_total))
-  names(degs_all)[length(degs_all)] = p.value_t.test
+  setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+  forceSetWd(comp)
+  forceSetWd('DEGs')
+  forceSetWd('plots')
+  png('maximum_N_of_DEGs_per_pvalue.png')
+  barplot(degs_all, las = 2, main = comp)
+  dev.off()
   
 }
 
-
-setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
-forceSetWd(comp)
-forceSetWd('DEGs')
-forceSetWd('plots')
-png('maximum_N_of_DEGs_per_pvalue.png')
-barplot(degs_all, las = 2, main = comp)
-dev.off()
 
 
 # Write big files ---------------------------------------------------------
 
-
-setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
-forceSetWd(comp)
-if (proteomics) {
-  forceSetWd('filtered_by_protx')
-  saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
-  write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
-              sep = '\t')
-  saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
-  write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
-              sep = '\t')
-  
-} else {
-  saveRDS(object = trt_df_geneid, file = 'whole_table_all_genes.rds')
-  write.table(x = trt_df_geneid, file = 'whole_table_all_genes.tsv', 
-              sep = '\t')
+if (save.files) {
+  setwd('/share/analysis/hecatos/juantxo/Score/analysis/t-test/')
+  forceSetWd(comp)
+  if (proteomics) {
+    forceSetWd('filtered_by_protx')
+    saveRDS(object = trt_proteomx, file = 'whole_table_genes_filtered.rds')
+    write.table(x = trt_proteomx, file = 'whole_table_genes_filtered.tsv', 
+                sep = '\t')
+    saveRDS(object = trt_comp_untr, file = 'whole_table_all_genes.rds')
+    write.table(x = trt_comp_untr, file = 'whole_table_all_genes.tsv', 
+                sep = '\t')
+    
+  } else {
+    saveRDS(object = trt_df_geneid, file = 'whole_table_all_genes.rds')
+    write.table(x = trt_df_geneid, file = 'whole_table_all_genes.tsv', 
+                sep = '\t')
+    
+  }
   
 }
 
