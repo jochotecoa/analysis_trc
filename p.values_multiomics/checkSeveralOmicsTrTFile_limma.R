@@ -1,9 +1,8 @@
  
 # Functions ---------------------------------------------------------------
-transformLogTPM = function(x) {
-  # x[is.na.data.frame(x)] = 1
-  x = x + 1 #Pseudocounts
-  y = log2(x)
+pseudocount = function(x, addition = 1) {
+  x = x + addition
+  return(x)
 }
 
 boxplot.dose = function(df, omics, ...) {
@@ -59,6 +58,11 @@ plotOmics = function(df, omics, transcript, ylim = NULL, ...) {
 }
 
 theVsTox_fun_limma <- function(df, omics, cond1, cond2, title = NULL, plotting = F, ...) {
+  pseudocount = function(x, addition = 1) {
+    x = x + addition
+    return(x)
+  }
+  
   cond1_cols = df %>% dplyr::select(contains(cond1)) %>% 
     dplyr::select(starts_with(omics)) %>% colnames()
   cond2_cols = df %>% dplyr::select(contains(cond2)) %>% 
@@ -73,7 +77,8 @@ theVsTox_fun_limma <- function(df, omics, cond1, cond2, title = NULL, plotting =
   
   res.df = df %>% 
     dplyr::select(cond1_cols, cond2_cols) %>% 
-    transformLogTPM() %>%
+    pseudocount() %>%
+    log2() %>% 
     lmFit(design) %>% 
     eBayes(trend = T) 
     # decideTests() %>% summary()

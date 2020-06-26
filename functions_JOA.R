@@ -48,6 +48,12 @@ zeroToNa = function(x) {
   return(x)
 }
 
+pseudocount = function(x, addition = 1) {
+  x = x + addition
+  return(x)
+}
+
+
 transcrToGene = function(table, aggregate = F, prot_cod = F) {
   forceLibrary(c('biomaRt', 'dplyr'))
   
@@ -229,8 +235,8 @@ filterSamplesBySeqDepth = function(df) {
   
   df = df[, seq_depth_ratio < 2]
 }
-apply_2D = function(df, FUN, col.x, col.y, complete_cases = NULL, y = NULL,
-                    ...) {
+apply_2D = function(df, FUN, col.x = NULL, col.y = NULL, complete_cases = NULL, 
+                    y = NULL, ...) {
   library(dplyr)
   if (exists('result.df')) {
     rm(result.df)

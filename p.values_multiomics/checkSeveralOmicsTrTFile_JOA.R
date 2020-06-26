@@ -1,5 +1,9 @@
 
 # Functions ---------------------------------------------------------------
+pseudocount = function(x, addition = 1) {
+  x = x + addition
+  return(x)
+}
 
 boxplot.dose = function(df, omics, ...) {
   x = df %>% dplyr::select(matches(omics))
@@ -52,14 +56,32 @@ plotOmics = function(df, omics, transcript, ylim = NULL, ...) {
   
   par(new = TRUE)
 }
-theVsTox_fun <- function(df, omics, cond1, cond2, title = NULL, plot = F, ...) {
+theVsTox_fun <- function(df, omics, cond1, cond2, title = NULL, 
+                         plot = F, pseudocounts = F, ...) {
   the_cols = df %>% dplyr::select(contains(cond1)) %>% 
-    dplyr::select(starts_with(omics)) %>% colnames()
+    dplyr::select(starts_with(omics)) %>% 
+    colnames()
   tox_cols = df %>% dplyr::select(contains(cond2)) %>% 
-    dplyr::select(starts_with(omics)) %>% colnames()
+    dplyr::select(starts_with(omics)) %>% 
+    colnames()
   
-  res.df = df %>% dplyr::select(the_cols, tox_cols) %>% zeroToNa() %>% log2() %>% 
-    apply_2D(col.x = the_cols, col.y = tox_cols, ...)
+  
+  if (pseudocounts) {
+    res.df = df %>% 
+      dplyr::select(the_cols, tox_cols) %>% 
+      pseudocount() %>% 
+      log2() %>% 
+      apply_2D(col.x = the_cols, col.y = tox_cols, ...)
+    
+  } else {
+    res.df = df %>% 
+      dplyr::select(the_cols, tox_cols) %>% 
+      zeroToNa() %>% 
+      log2() %>% 
+      apply_2D(col.x = the_cols, col.y = tox_cols, ...)
+    
+  }
+
   
   if (plot) {
     res.df$p.value_tpm %>% .
@@ -99,10 +121,23 @@ forceLibrary(c('dplyr', 'tibble'))
 if (!exists('comp')) {
   comp = 'DOC'
 }
+if (!exists('tpm_filtering')) {
+  tpm_filtering = 1
+}
+if (!exists('proteomics')) {
+  proteomics = T
+}
+if (!exists('plotting')) {
+  plotting = F
+}
+if (!exists('miRNA_factor')) {
+  miRNA_factor = 0.1
+}
+if (!exists('pseudocounts_ttest')) {
+  pseudocounts_ttest = T
+}
 
-proteomics = F
-plotting = F
-miRNA_factor = 0.1
+
 TrT_miF = paste0('TrT_', miRNA_factor, '_') 
 repo_dir = '/share/script/hecatos/juantxo/analysis_trc/'
 
@@ -247,19 +282,31 @@ trt_df_geneid = trt_df_geneid %>% group_by(ensembl_gene_id) %>%
 #        p.adj_theVStox_TPM = p.adjust(p.value_tpm, method = 'BH')) %>% 
 #   rename(p.adj_prx = p.adj) %>% 
 
+# Filter genes for which all UNTR values are not at least >= threshold value
+
+if (!is.null(tpm_filtering)) {
+  target_tpm = trt_df_geneid %>% 
+    dplyr::select(matches('targetRNA_TPM_UNTR')) 
+  rows_filt = target_tpm >= tpm_filtering
+  rows_filt = apply(rows_filt, 1, all)
+  
+  trt_df_geneid = trt_df_geneid[rows_filt, ]
+}
 
 # t.tests -----------------------------------------------------------------
 
 theVStox_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',  
                                    FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
                                    paired = T, complete_cases = comp_cas,
-                                   title = 'theVStox_TPM')
+                                   title = 'theVStox_TPM', 
+                                   pseudocounts = pseudocounts_ttest)
 
 # If it takes 1h, column_to_rownames() #If result.df not found, exchange TrT/TRC
 theVStox_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
                                    FUN = t.test, cond1 = 'The', cond2 = 'Tox', 
                                    paired = T, complete_cases = comp_cas, 
-                                   title = 'theVStox_TrT')
+                                   title = 'theVStox_TrT', 
+                                   pseudocounts = pseudocounts_ttest)
 
 # UNTR_002_3 has low sequencing depth, so we cannot compare it to others
 
@@ -275,27 +322,32 @@ if (!any(grepl(pattern = 'Dox|Epi', x = colnames(trt_df)))) {
 untVSthe_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'The', 
                                    paired = T, complete_cases = comp_cas, 
-                                   title = 'untVSthe_TPM')
+                                   title = 'untVSthe_TPM', 
+                                   pseudocounts = pseudocounts_ttest)
 
 untVStox_t.test_tpm = theVsTox_fun(df = trt_df_geneid, omics = 'target',   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'Tox', 
                                    paired = T, complete_cases = comp_cas, 
-                                   title = 'untVStox_TPM')
+                                   title = 'untVStox_TPM', 
+                                   pseudocounts = pseudocounts_ttest)
 
 
 untVSthe_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'The', 
                                    paired = T, complete_cases = comp_cas, 
-                                   title = 'untVSthe_TrT')
+                                   title = 'untVSthe_TrT', 
+                                   pseudocounts = pseudocounts_ttest)
 
 untVStox_t.test_trt = theVsTox_fun(df = trt_df_geneid, omics = TrT_miF,   
                                    FUN = t.test, cond1 = 'UNTR', cond2 = 'Tox', 
                                    paired = T, complete_cases = comp_cas, 
-                                   title = 'untVStox_TrT')
+                                   title = 'untVStox_TrT', 
+                                   pseudocounts = pseudocounts_ttest)
 
 trt_df_t.tests = merge.data.frame(x = rownames_to_column(trt_df_geneid), 
                                   y = theVStox_t.test_tpm,
-                                  by = 'rowname', all = T) %>% 
+                                  by = 'rowname', all = T, 
+                                  pseudocounts = pseudocounts_ttest) %>% 
   merge.data.frame(y = untVSthe_t.test_tpm,
                    by = 'rowname', all = T) %>% 
   merge.data.frame(y = untVStox_t.test_tpm, 

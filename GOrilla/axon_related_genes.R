@@ -53,9 +53,9 @@ if (!exists('trt_df_geneid')) {
 
 forceSetWd('/share/analysis/hecatos/juantxo/Score/analysis/GOrilla')
 
-gene_details = trt_df_geneid %>% 
+gene_details = trt_df_t.tests %>% 
   rownames_to_column() %>% 
-  filter(rowname == 'ENSG00000196923')
+  filter(rowname == 'ENSG00000146729')
 
 dim(gene_details)
 

@@ -21,6 +21,12 @@ for (comp in comps) {
   forceSetWd('DEGs')
   
   output.files = list.files(pattern = 'p.adj.*_TPM', recursive = T)
+  items_excl = output.files %>% grepl('exclusive', .) 
+  excl.files = output.files[items_excl]
+  for (excl.file in excl.files) {
+    file.remove(excl.file)
+  }
+  output.files = list.files(pattern = 'p.adj.*_TPM', recursive = T)
   
   
   for (output.file in output.files) {
