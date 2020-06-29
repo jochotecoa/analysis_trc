@@ -57,7 +57,8 @@ plotOmics = function(df, omics, transcript, ylim = NULL, ...) {
   par(new = TRUE)
 }
 
-theVsTox_fun_limma <- function(df, omics, cond1, cond2, title = NULL, plotting = F, ...) {
+theVsTox_fun_limma <- function(df, omics, cond1, cond2, title = NULL, 
+                               plotting = F,  ...) {
   pseudocount = function(x, addition = 1) {
     x = x + addition
     return(x)
