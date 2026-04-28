@@ -1,83 +1,18 @@
-##### Library and functions #####
-forceLibrary <- function(list.of.packages) {
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
-  if (length(new.packages)) {
-    install.packages(new.packages)
-  } else {
-    print('All libraries already installed')
-  }
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
-  if (length(new.packages)) {
-    setRepositories(graphics = F, ind = 1:8)
-    install.packages(new.packages)
-  }
-  lapply(list.of.packages, library, character.only = T)
-  return(NULL)
-}
+#' miRNA Effect Analysis using miRTarBase
+#' 
+#' This script investigates the relationship between miRNAs and protein-coding genes
+#' using miRTarBase data and protein correlation results.
+#'
+#' Inputs:
+#' - miRTarBase MTI (hsa_MTI.csv)
+#' - Low-correlated proteins table
+#' - BiomaRt for gene mapping
+#'
+#' Outputs:
+#' - Frequency distribution plots of miRNA interactions
 
+source("../utils.R")
 forceLibrary(c('biomaRt', 'fitdistrplus'))
-tablePct <- function(x) {
-  x.table = table(x)
-  x.proportion = x.table / length(x)
-  x.percent = x.proportion * 100
-  return(x.percent)
-}
-
-plot.freq <- function(x, y = NULL, outliers.rm = F, x.lab = '', y.lab = '', 
-                      fill = '', x.name = '', y.name = '', angle = 0, 
-                      nbreaks = 10, ...) {
-  library(ggplot2)
-  naToZero <- function(x) {
-    x[is.na(x)] = 0
-    return(x)
-  }
-  x = naToZero(x)
-  if (outliers.rm) {
-    x.old.min = min(x)
-    x.old.max = max(x)
-    Q1 = quantile(x, .25, na.rm = T)
-    Q3 = quantile(x, .75, na.rm = T)
-    IQ = Q3 - Q1
-    lower.outer.fence = Q1 - 3*IQ
-    upper.outer.fence = Q3 + 3*IQ
-    x = x[x > lower.outer.fence & x < upper.outer.fence]
-  }
-  x.range = max(x) - min(x)
-  x.breaks = seq(from = min(x), to = max(x), by = (x.range/nbreaks))
-  if (outliers.rm) {
-    x.breaks = c(x.old.min, x.breaks[2:nbreaks], x.old.max)
-  }
-  x.cut = cut(x, breaks = x.breaks, include.lowest = T)
-  x.table = table(x.cut) / length(x) * 100
-  if (!is.null(y)) {
-    y = naToZero(y)
-    y.cut = cut(y, breaks = x.breaks, include.lowest = T)
-    y.table = table(y.cut) / length(y) * 100
-    xy.table = rbind(x.table, y.table)
-    xy.df = as.data.frame(xy.table)
-    f = merge(stack(xy.df), stack(as.data.frame(t(xy.df))), by = 'values')
-    if (x.name != '') {
-      f[, 3] = gsub(pattern = 'x.table', replacement = x.name, x = f[, 3])
-    }
-    if (y.name != '') {
-      f[, 3] = gsub(pattern = 'y.table', replacement = y.name, x = f[, 3])
-    }
-    ggplot(f, aes(x = f[, 2], y = f[, 1], fill = f[, 3])) +
-      geom_bar(stat = "identity", position = "dodge") +
-      theme(axis.text.x = element_text(angle = angle)) +
-      labs(fill = fill, x = x.lab, y = y.lab)
-    
-  } else {
-    x.df = as.data.frame(x.table)
-    x.df$names = rownames(x.df)
-    ggplot(x.df, aes(x = x.cut, y = x.df[, 2])) +
-      geom_bar(stat = 'identity') +
-      theme(axis.text.x = element_text(angle = angle)) +
-      labs(x = x.lab, y = y.lab, ...)
-  }
-}
 
 ##### Analysis #####
 

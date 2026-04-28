@@ -1,125 +1,19 @@
-##### Libraries #####
-forceLibrary <- function(list.of.packages) {
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
-  if (length(new.packages)) {
-    install.packages(new.packages)
-  } else {
-    print('All libraries already installed')
-  }
-  new.packages.log = !(list.of.packages %in% installed.packages()[,"Package"])
-  new.packages <- list.of.packages[new.packages.log]
-  if (length(new.packages)) {
-    setRepositories(graphics = F, ind = 1:8)
-    install.packages(new.packages)
-  }
-  lapply(list.of.packages, library, character.only = T)
-  return(NULL)
-}
+#' Comparison of Transcript (TRC) and Protein Expression for Several Transcripts
+#' 
+#' This script analyzes the correlation between transcriptomics (TRC/TPM) and proteomics data.
+#' It handles time-shifted correlations and minimum sample filtering.
+#'
+#' Inputs:
+#' - Proteomics pre-processed files
+#' - TRC score files
+#' - BiomaRt for transcript-protein mapping
+#'
+#' Outputs:
+#' - Correlation tables (TSV)
+#' - Distribution plots (PNG)
 
-forceLibrary(list.of.packages = c('pbmcapply', 'biomaRt'))
-
-##### Personal functions ####
-
-getSamples <- function(timepoints, triplicates, doses = '', control = F) {
-  samples = c()
-  if (control) {
-    for (tp in timepoints) {
-      for (tr in triplicates) {
-        samples = c(samples, paste(tp, tr, sep = '_'))
-      }
-    }
-  } else {
-    for (d in doses) {
-      for (tp in timepoints) {
-        for (tr in triplicates) {
-          samples = c(samples, paste(d, tp, tr, sep = '_'))
-        }
-      }
-    }
-  }
-  return(samples)
-}
-get.or.assign <- function(var.name, filepath) {
-  if (length(ls(pattern = var.name)) > 0) {
-    file = get(var.name)
-  } else {
-    file = read.table(filepath)
-    assign(x = var.name, value = file)
-  }
-  return(file)
-}
-setOrCreatewd <- function(dir.name) {
-  if (dir.exists(dir.name)) {
-    setwd(dir.name)
-  } else {
-    dir.create(dir.name, recursive = T)
-    if (dir.exists(dir.name)) {
-      setwd(dir.name)
-    } else {
-      stop(paste('Permission denied to create', dir.name, 'in', getwd()))
-    }
-    
-  }
-}
-read.and.format.proteindata <- function(proteomicsfilepath, comp, samples) {
-  proteinvaluesfile.colnames = read.table(proteomicsfilepath, nrows = 1, 
-                                          stringsAsFactors = F)
-  proteinvaluesfile = read.table(proteomicsfilepath, skip = 1, 
-                                 stringsAsFactors = F, 
-                                 header = F, 
-                                 sep = ' ', 
-                                 fill = T)
-  if (ncol(proteinvaluesfile) != ncol(proteinvaluesfile.colnames)) {
-    proteinvaluesfile = read.table(proteomicsfilepath, 
-                                   skip = 1, 
-                                   stringsAsFactors = F, 
-                                   header = F, 
-                                   sep = '\t', 
-                                   fill = T)
-  }
-  proteinvaluesfile = proteinvaluesfile[grep('.*\\|.*\\|.*', 
-                                             proteinvaluesfile[,1]),]
-  proteinvaluesfile = proteinvaluesfile[!grepl(pattern = ':', 
-                                               proteinvaluesfile$V2),]
-  proteinvaluesfile[,2:ncol(proteinvaluesfile)] = sapply(proteinvaluesfile[,2:ncol(proteinvaluesfile)], 
-                                                         as.double)
-  proteinvaluesfile = cbind(proteinvaluesfile[,1], 
-                            proteinvaluesfile[,!is.na(sapply(proteinvaluesfile, 
-                                                             mean, na.rm = T))])
-  proteinvaluesfile[,1] = as.character(proteinvaluesfile[,1])
-  colnames(proteinvaluesfile) = proteinvaluesfile.colnames[,1:ncol(proteinvaluesfile)]
-  protvalcomp = proteinvaluesfile[,c(1,grep(toupper(comp), 
-                                            colnames(proteinvaluesfile)))] # Get all columns with our compound
-  selectedtimepointcolumns = c(1,grep(pattern = paste(samples, 
-                                                      collapse = '|'), 
-                                      x = colnames(protvalcomp))) # Select only columns with timepoints of interest
-  protvalcompsel = protvalcomp[rowSums(!is.na(protvalcomp[,selectedtimepointcolumns])) > 2, 
-                               selectedtimepointcolumns] # Filter proteins with =< 2 expressions
-}
-saveMetadata <- function(x) {
-  setOrCreatewd <- function(dir.name) {
-    if (dir.exists(dir.name)) {
-      setwd(dir.name)
-    } else {
-      dir.create(dir.name, recursive = T)
-      if (dir.exists(dir.name)) {
-        setwd(dir.name)
-      } else {
-        stop(paste('Permission denied to create', dir.name, 'in', getwd()))
-      }
-      
-    }
-  }
-  setOrCreatewd('metadata')
-  for (obj.name in x) {
-    obj.data = get(obj.name)
-    if (typeof(obj.data) != "closure" | class(obj.data) != "function") {
-      write.table(x = obj.data, file = paste0(obj.name, '.tsv'))
-    }
-  }
-  setwd('../')
-}
+source("../utils.R")
+forceLibrary(c('pbmcapply', 'biomaRt'))
 
 ##### Input Variables #####
 

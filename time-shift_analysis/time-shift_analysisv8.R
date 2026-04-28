@@ -1,50 +1,22 @@
-library('biomaRt') # setRepositories() # install.packages('biomaRt')
-library(plyr)
-library(ggplot2)
-library(scales)
+#' Time-shift Analysis of Correlation between TRC and Protein Expression
+#' 
+#' This script analyzes protein half-lives in relation to observed time-shifts
+#' in transcript-protein correlation.
+#'
+#' Inputs:
+#' - Correlation results with shift information
+#' - Protein half-life data (Nature 2011)
+#'
+#' Outputs:
+#' - Comparison plots of half-lives across different time-shifts
+
+source("../utils.R")
+forceLibrary(c('biomaRt', 'plyr', 'ggplot2', 'scales'))
 
 # INPUT VARIABLES
 comp = 'UNTR'
 
-# FUNCTIONS
-compare <- function(dataset1, dataset2, column) {
-  difference = summary(dataset2[,column]) - summary(dataset1[,column])
-  return(abs(difference))
-}
-freq.dist <- function(column, type = 'sd', from = '', to = '', rot_angle = 45, main ='', xlab = '', ylab = '') {
-  sd = sd(column, na.rm = T)
-  mn = mean(column, na.rm = T)
-  mxm = max(column, na.rm = T)
-  mnm = min(column, na.rm = T)
-  if (type == 'sd') {
-    bye = (2*sd + mn - (mn - 2*sd))/10
-    brks = seq(from = mnm, to = mxm, by = bye)
-  }
-  if (type == 'minmax') {
-    bye = (mxm - mnm)/10
-    brks = seq(from = mnm, to = mxm, by = bye)
-  }
-  if (type == 'custom') {
-    bye = (to - from)/10
-    brks = seq(from = from, to = to, by = bye)
-  }
-  
-  if (type == 'sd') {
-    if (mnm < (mn - 2*sd)) {
-      brks = c(mnm, brks)
-    }
-    if (mxm > (mn + 2*sd)) {
-      brks = c(brks, mxm)
-    }
-  }
-  ct = cut(column, breaks = brks)
-  tbl = table(ct)
-  plt <- barplot(tbl, col='steelblue', xaxt="n", main = main, xlab = xlab, ylab = ylab)
-  text(plt, par("usr")[3], labels = names(tbl), srt = rot_angle, adj = c(1.1,1.1), xpd = TRUE, cex=0.6) 
-  return(tbl)
-}
-
-setwd('/share/analysis/hecatos/juantxo/score_protein_analysis/')
+# Analysis
 datafile.name = paste0(comp, 
                        'UNTR_correlation_results_TRC_protein_1onseveral_until072_minimumexpressedsamples-12_shift-TRUE_timeps-shifted-002.tsv')
 datafile = read.table(datafile.name, header = T, stringsAsFactors = F)

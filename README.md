@@ -4,10 +4,16 @@
 
 This project contains a series of R scripts for the analysis of transcriptomics (TRC) and proteomics data. The analyses include differential expression, correlation analysis, and pathway analysis to investigate the relationship between different omics layers.
 
+## Key Improvements
+
+- **Centralized Utilities:** Shared functions are now consolidated in `utils.R`.
+- **Decluttered Workspace:** Older versions of scripts have been moved to the `archive/` directory.
+- **Improved Maintainability:** Main scripts have been refactored to use `utils.R` and include descriptive headers.
+
 ## Project Structure
 
-The project is organized into the following main directories:
-
+- `utils.R`: Centralized utility functions used across the project.
+- `archive/`: Historical versions of scripts.
 - `best_cases/`: Scripts for analyzing best-case scenarios or specific subsets of data.
 - `comparing_higuest_correlations_tpm_trc/`: Scripts for comparing high-correlation data between TPM and TRC normalized data.
 - `correlation_transcr_prot/`: Scripts for analyzing the correlation between transcript and protein expression.
@@ -26,29 +32,12 @@ The project is organized into the following main directories:
 ## Key Scripts
 
 - `analysis_trc.Rproj`: RStudio project file.
-- `checkSeveralOmicsTrTFile.R`: Script to check omics data.
-- `correlation_trc_vs_tpm.R`: Script for correlating TRC and TPM data.
-- `functions.R`, `functions_JOA.R`: Contain custom functions used in the analysis.
-- `heatmap_RNA.R`: Script for generating heatmaps.
-- `mirna_effect_on_TPM_TRC_Protein.R`: Script to analyze miRNA effects.
-
-## Dependencies
-
-This project is based on R and RStudio. It requires several Bioconductor and CRAN packages, including:
-
-- `DESeq2`
-- `edgeR`
-- `limma`
-- `ggplot2`
-- `pheatmap`
-- and others.
-
-To ensure reproducibility, it is recommended to use a version of R and Bioconductor consistent with the analysis period.
+- `utils.R`: The main library of helper functions.
+- `trc_protein_comparison_severaltranscripts/trc_protein_comparison_severaltranscriptsv33.R`: Latest multi-transcript comparison script.
+- `time-shift_analysis/time-shift_analysisv8.R`: Latest time-shift analysis script.
 
 ## How to Run
 
 1.  Open the `analysis_trc.Rproj` file in RStudio.
-2.  Install the required packages.
-3.  Run the individual scripts as needed. The scripts are generally organized by analysis type, so you can run the scripts in the corresponding directory for a specific analysis.
-
-**Note:** This README was generated based on the project's file structure. The descriptions are inferred and may require further detail from the original authors.
+2.  The `utils.R` file will be sourced by the main scripts. Ensure you have the necessary permissions for package installation.
+3.  Run the individual scripts in their respective directories.
