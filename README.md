@@ -6,12 +6,14 @@ This project contains a series of R scripts for the analysis of transcriptomics 
 
 ## Key Improvements
 
-- **Centralized Utilities:** Shared functions are now consolidated in `utils.R`.
+- **Centralized Configuration:** Project-wide variables and paths are now in `config.R`.
+- **Centralized Utilities:** Shared functions are consolidated in `utils.R`.
 - **Decluttered Workspace:** Older versions of scripts have been moved to the `archive/` directory.
-- **Improved Maintainability:** Main scripts have been refactored to use `utils.R` and include descriptive headers.
+- **Improved Maintainability:** Main scripts have been refactored to use `config.R` and `utils.R`.
 
 ## Project Structure
 
+- `config.R`: Centralized configuration and path variables.
 - `utils.R`: Centralized utility functions used across the project.
 - `archive/`: Historical versions of scripts.
 - `best_cases/`: Scripts for analyzing best-case scenarios or specific subsets of data.

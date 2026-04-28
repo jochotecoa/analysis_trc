@@ -1,99 +1,102 @@
 # load required packages
-require("DESeq2")
-require("ggplot2")
-require("pheatmap")
-require("grid")
-library("gridExtra")
+source("../../utils.R")
+forceLibrary(c("DESeq2", "ggplot2", "pheatmap", "grid", "gridExtra"))
 
 options(scipen=999) # turn off scientific notation like 1e+06
 
-# Setup your working directory
-predir <- 'C:/D/florian/andrea/'
-WORK.DIR <- paste(predir,"Batch1/", sep="")
+# Use paths from config or relative paths
+WORK.DIR <- getwd()
 setwd(WORK.DIR)
 
 # read the raw data table
 dataFile <- "Andrea_raw_count.txt"
-mRNAtot <- read.delim(dataFile, header=TRUE, row.names=1, sep="\t")
-colnames(mRNAtot) <- gsub("X","",colnames(mRNAtot))
+if (file.exists(dataFile)) {
+    mRNAtot <- read.delim(dataFile, header=TRUE, row.names=1, sep="\t")
+    colnames(mRNAtot) <- gsub("X","",colnames(mRNAtot))
+} else {
+    warning("Data file not found: ", dataFile)
+    mRNAtot <- data.frame()
+}
 
-rnaseq_id <- read.table(file = "all_genes.txt", header = TRUE, sep = "\t")
+rnaseq_id_file = "all_genes.txt"
+if (file.exists(rnaseq_id_file)) {
+    rnaseq_id <- read.table(file = rnaseq_id_file, header = TRUE, sep = "\t")
+} else {
+    rnaseq_id <- data.frame()
+}
 
 ## Read the metadata table
-samplekey <- read.csv("samplekey_r_nr_beforehormonaltreatment.csv", header=TRUE)
-rownames(samplekey) <- sub(pattern="X", replacement="", x=rownames(samplekey))
+metadata_file = "samplekey_r_nr_beforehormonaltreatment.csv"
+if (file.exists(metadata_file)) {
+    samplekey <- read.csv(metadata_file, header=TRUE)
+    rownames(samplekey) <- sub(pattern="X", replacement="", x=rownames(samplekey))
+} else {
+    samplekey <- data.frame()
+}
 
-mRNAtot <- mRNAtot[,colnames(mRNAtot) %in% rownames(samplekey)]
-
-## Look for the number of reads per samples: 
-raw_read_count <- colSums(mRNAtot)
-
-barplot(raw_read_count, las=2, cex.names=0.6)
-barplot(log2(raw_read_count), las=2, cex.names=0.6)
-
-# filter samples with less than 1000000 reads
-
-samplekey <- samplekey[rownames(samplekey) %in% colnames(mRNAtot),]
-
-
-
-## Start the statistical analysis made on the Compounds variable from the metadata file. You could change this by modifying the Compound by another field from Metadata
-dds <- DESeqDataSetFromMatrix(countData = round(mRNAtot),
-                              colData = samplekey,
-                              design = ~ status)
-
-# If you want DeSEQ NOT to normalize you data, do : 
-# sizeFactors(dds) <- rep(1, ncol(dds))
-
-
-dds<-DESeq(dds)
-
-# perform the normalization of the read count 
-norm_data <- counts(dds,normalized=TRUE)               
-
-norm_data_name <- merge(norm_data,rnaseq_id["gene_name"],by="row.names",all.x=TRUE)
-rownames(norm_data_name) <- norm_data_name$Row.names
-norm_data_name <- norm_data_name[,-1]
-
-norm_read_count <- colSums(norm_data)
-barplot(norm_read_count, las=2, cex.names=0.6)
-barplot(log2(norm_read_count), las=2, cex.names=0.6)
-
-## Set the pvalue to 0.05
-res <- results(dds, alpha=0.05, contrast=c("status", "Response" , "No_response"))
-res <- res[order(res$padj),]
-
-# perform a PCA plot. You can change the condition assessed by the pca plot by changing the value between [] from 1 to 3 (corresponding to the column number of the metadata file)
-rld <- vst(dds)
-plotPCA(rld,intgroup=c(colnames(samplekey)[5]))
-savePlot(filename="localisation.png",type="png")
-
-## extract the differentially expressed genes passing FDR multiple testing
-DEmRNA_fdr <-  subset(res,res$padj < 0.05)
-DEmRNA_fdr <- DEmRNA_fdr[order(DEmRNA_fdr$padj),]
-
-print(paste("there is",nrow(DEmRNA_fdr), "gene(s) passing FDR correction"))
-
-DEmRNA_all <-  subset(res,res$pvalue < 0.05)
-
-print(paste("there is",nrow(DEmRNA_all), "gene(s) have a pvalue < 0.05"))
-
-# save the normalized count table: 
-write.table(norm_data,file="batch2_norm_counts.txt", sep="\t", quote=FALSE)
-
-# save the pvalue and fdr corrected value for each gene: 
-write.table(res,file="batch2_DE_Analysis.txt", sep="\t", quote=FALSE)
-
-# save the pvalue and fdr corrected value for each gene: 
-write(rownames(DEmRNA_fdr),file="list_DEGs.txt")
-
-# perform a heat Map:
-#norm_data_heatmap <- subset(norm_data_name, rownames(norm_data_name) %in% rownames(DEmRNA_fdr)[1:100])
-#pheatmap(log2(norm_data_heatmap+0.1), show_rownames=FALSE)            
-
-norm_data_heatmap <- subset(norm_data_name, rownames(norm_data_name) %in% rownames(DEmRNA_fdr)[1:100])
-rownames(norm_data_heatmap) <- norm_data_heatmap$gene_name)
-pheatmap(log2(norm_data_heatmap[,1:ncol(norm_data_heatmap)-1]+1), show_rownames=TRUE,labels_row=norm_data_heatmap$gene_name, cellwidth=30 , cellheight= 6.5 , fontsize= 7)
+if (nrow(mRNAtot) > 0 && nrow(samplekey) > 0) {
+    mRNAtot <- mRNAtot[,colnames(mRNAtot) %in% rownames(samplekey)]
+    
+    ## Look for the number of reads per samples
+    raw_read_count <- colSums(mRNAtot)
+    
+    # filter samples with less than 1000000 reads
+    samplekey <- samplekey[rownames(samplekey) %in% colnames(mRNAtot),]
+    
+    ## DESeq2 Analysis
+    dds <- DESeqDataSetFromMatrix(countData = round(mRNAtot),
+                                  colData = samplekey,
+                                  design = ~ status)
+    
+    dds <- DESeq(dds)
+    
+    # perform the normalization of the read count 
+    norm_data <- counts(dds, normalized=TRUE)               
+    
+    if ("gene_name" %in% colnames(rnaseq_id)) {
+        norm_data_name <- merge(norm_data, rnaseq_id["gene_name"], by="row.names", all.x=TRUE)
+        rownames(norm_data_name) <- norm_data_name$Row.names
+        norm_data_name <- norm_data_name[,-1]
+    } else {
+        norm_data_name <- as.data.frame(norm_data)
+    }
+    
+    ## Set the pvalue to 0.05
+    res <- results(dds, alpha=0.05, contrast=c("status", "Response" , "No_response"))
+    res <- res[order(res$padj),]
+    
+    # perform a PCA plot
+    rld <- vst(dds)
+    plotPCA(rld, intgroup=c(colnames(samplekey)[min(5, ncol(samplekey))]))
+    
+    ## extract the differentially expressed genes passing FDR multiple testing
+    DEmRNA_fdr <- subset(res, res$padj < 0.05)
+    DEmRNA_fdr <- DEmRNA_fdr[order(DEmRNA_fdr$padj),]
+    
+    print(paste("there is", nrow(DEmRNA_fdr), "gene(s) passing FDR correction"))
+    
+    # save the results
+    write.table(norm_data, file="batch2_norm_counts.txt", sep="\t", quote=FALSE)
+    write.table(res, file="batch2_DE_Analysis.txt", sep="\t", quote=FALSE)
+    write(rownames(DEmRNA_fdr), file="list_DEGs.txt")
+    
+    # Heatmap of top 100 DEGs
+    if (nrow(DEmRNA_fdr) > 0) {
+        top_genes = rownames(DEmRNA_fdr)[1:min(100, nrow(DEmRNA_fdr))]
+        norm_data_heatmap <- subset(norm_data_name, rownames(norm_data_name) %in% top_genes)
+        
+        if ("gene_name" %in% colnames(norm_data_heatmap)) {
+            # Fix syntax error and handle mapping
+            plot_data = norm_data_heatmap[, setdiff(colnames(norm_data_heatmap), "gene_name")]
+            pheatmap(log2(plot_data + 1), show_rownames=TRUE, 
+                     labels_row=norm_data_heatmap$gene_name, 
+                     cellwidth=30, cellheight=6.5, fontsize=7)
+        } else {
+            pheatmap(log2(norm_data_heatmap + 1), show_rownames=TRUE, 
+                     cellwidth=30, cellheight=6.5, fontsize=7)
+        }
+    }
+}
 
 
 # Look for the normalized read count of a gene. You can freely change the ensembl ID to plot your gene of interest

@@ -17,14 +17,21 @@ forceLibrary(c('pbmcapply', 'biomaRt'))
 
 ##### Input Variables #####
 
-compound = 'Con_UNTR'
-comp = 'UNTR'
+compound = if(exists("DEFAULT_COMPOUND")) DEFAULT_COMPOUND else 'Con_UNTR'
+comp = if(exists("DEFAULT_COMP")) DEFAULT_COMP else 'UNTR'
 control = T
 doses = c('The','Tox')
-timepoints = c('002', '008', '024', '072')
-triplicates = 1:3
-MITdir = '/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/'
-organpath = '/ngs-data/data/hecatos/Cardiac'
+timepoints = if(exists("DEFAULT_TIMEPOINTS")) DEFAULT_TIMEPOINTS else c('002', '008', '024', '072')
+triplicates = if(exists("DEFAULT_TRIPLICATES")) DEFAULT_TRIPLICATES else 1:3
+
+# Construct paths using config variables if available
+if (exists("SCORE_OUTPUT_PATH")) {
+  MITdir = file.path(SCORE_OUTPUT_PATH, 'V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/')
+} else {
+  MITdir = '/share/analysis/hecatos/juantxo/Score/output/Output_Run_mrna_SEPT2019/V3/output/UNTR/2019-10-29_16:38:03_UTC/TRCscore/'
+}
+
+organpath = if(exists("PROTEOMICS_BASE_PATH")) PROTEOMICS_BASE_PATH else '/ngs-data/data/hecatos/Cardiac'
 predictive.values.list = c('targetRNA_TPM', 'TRC') # TRC / targetRNA_TPM
 minimum_samples.list = c(3, 6, 9, 12)
 # F: no shift, T: shift, c(F,T): both
@@ -47,7 +54,7 @@ samples = getSamples(timepoints = timepoints,
 
 
 # Open protein expression file
-proteinpath = paste(organpath, compound, 'Protein', sep = '/')
+proteinpath = file.path(organpath, compound, 'Protein')
 proteindirs = list.dirs(path = proteinpath)
 proteomicspath = subset(x = proteindirs, 
                         grepl(pattern = 'Proteomics', x = proteindirs))
@@ -55,20 +62,18 @@ proteomicsfiles = list.files(path = proteomicspath)
 proteomicsfile = subset(x = proteomicsfiles, 
                         grepl(pattern = 'pre-processed_renamed', 
                               x = proteomicsfiles))
-proteomicsfilepath = paste(proteomicspath, proteomicsfile, sep = '/')
+proteomicsfilepath = file.path(proteomicspath, proteomicsfile)
 protvalcompsel = read.and.format.proteindata(proteomicsfilepath = proteomicsfilepath, 
                                              comp = comp, 
                                              samples = samples)
-# Format protein IDs to only UniProtIDs 
-protvalcompsel = protvalcompsel[!grepl(pattern = ':', protvalcompsel$Row.Names), ]
-protnaams = strsplit(x = protvalcompsel$Row.Names, split = '\\|') # Split IDs
-protnaams = as.character(lapply(X = protnaams, FUN = '[', 2)) # Only UniProt ID
-protvalcompsel$Row.Names = protnaams
+
+# Format protein IDs to only UniProtIDs using utility function
+protvalcompsel = cleanProtIds(protvalcompsel)
+protnaams = protvalcompsel$uniprot_gn
+rownames(protvalcompsel) = protnaams
 
 # Open Protein-Transcript table
-mart.human = useMart(biomart = 'ENSEMBL_MART_ENSEMBL', 
-                     dataset = 'hsapiens_gene_ensembl', 
-                     host = 'http://apr2018.archive.ensembl.org') 
+mart.human = openMart2018()
 
 transcr_all.list = getBM(attributes = c('uniprot_gn', 
                                         'ensembl_transcript_id', 
@@ -80,19 +85,30 @@ prot_cod.rows = transcr_all.list$transcript_biotype == 'protein_coding'
 protrans = transcr_all.list[prot_cod.rows, -3]
 
 
-setwd('/share/analysis/hecatos/juantxo/tableomics/enst_uniprot_tables/')
-protrans2 = read.csv(file = 'uniprot-yourlist_M20190501.csv2',
-                    header = T,
-                    stringsAsFactors = F)
+# Tableomics path from config
+enst_uniprot_path = if(exists("TABLEOMICS_PATH")) file.path(TABLEOMICS_PATH, 'enst_uniprot_tables/') else '/share/analysis/hecatos/juantxo/tableomics/enst_uniprot_tables/'
+if (dir.exists(enst_uniprot_path)) {
+  setwd(enst_uniprot_path)
+  if (file.exists('uniprot-yourlist_M20190501.csv2')) {
+    protrans2 = read.csv(file = 'uniprot-yourlist_M20190501.csv2',
+                        header = T,
+                        stringsAsFactors = F)
+  }
+}
 
-pb1 = progressBar(min = 0, max = length(minimum_samples.list), style = "ETA")
-# prefix = paste(comp, script.name, '', 
-               # sep = '_')
+pb1 = txtProgressBar(min = 0, max = length(minimum_samples.list), style = 3)
+
 time = timestamp()
 time = gsub(pattern = '#', replacement = '', x = time)
 time = gsub(pattern = '-', replacement = '', x = time)
 time = gsub(pattern = ' ', replacement = '_', x = time)
 
+# Cache TRC files to avoid repeated setwd and listing
+if (dir.exists(MITdir)) {
+  trc_files = list.files(MITdir)
+} else {
+  trc_files = character()
+}
 
 for (is.shift in is.shift.list) {
   for (predictive.values in predictive.values.list) {
@@ -103,42 +119,40 @@ for (is.shift in is.shift.list) {
       allprotTRCvalsel = data.frame(numeric())
       corlist = protlist = translist = shiftlist = NULL
       
-      pb2 = progressBar(min = 0, max = nrow(protvalcompsel), style = "ETA")
+      pb2 = txtProgressBar(min = 0, max = nrow(protvalcompsel), style = 3)
       for (protrow in 1:nrow(protvalcompsel)) {
         # Get the Protein ID
-        protvalsel = protvalcompsel[protrow,]
-        protnaam = protvalsel[1,1]
+        protvalsel = protvalcompsel[protrow, -ncol(protvalcompsel)] # exclude uniprot_gn column
+        protnaam = rownames(protvalcompsel)[protrow]
         
         # Look for transcripts related to our protein
         transcr.rows = grep(protrans$uniprot_gn, pattern = protnaam)
         transel = protrans$ensembl_transcript_id[transcr.rows] # Which transcripts are related to this UniProtID
         
-        # View(searchAttributes(mart = mart.human))
-                              
         if (length(transel) == 0) { 
           protwouttrans[length(protwouttrans) + 1] = protnaam
         } else {
           transel = unlist(strsplit(transel, ';'))
           
-          version = 0
           # Now that we have the transcript(s), we can get the data out of the score
           protTRCvalsel = rbind(protvalsel, rep(x = 0, ncol(protvalsel))) # 1 row for prot expression, and another row to be filled with TRC values
           
           for (t in transel) {
             # Get the TRC value for each sample
             for (s in samples) {
-              setwd(MITdir)
-              files = list.files()
-              samplefilepath = files[grep(pattern = s, x = files)]
+              samplefilepath = trc_files[grep(pattern = s, x = trc_files)]
               if (length(samplefilepath) == 0) {
                 samplefilepath = paste0(comp,'_',s, '_TRCscore.txt')
               }
-              if (file.exists(samplefilepath)) {
-                if (length(grep(pattern = s, x = ls())) > 0) {
-                  TRCscorefile = get(s)
+              
+              full_sample_path = file.path(MITdir, samplefilepath)
+              
+              if (file.exists(full_sample_path)) {
+                if (exists(s, envir = .GlobalEnv)) {
+                  TRCscorefile = get(s, envir = .GlobalEnv)
                 } else {
-                  TRCscorefile = read.table(samplefilepath)
-                  assign(x = s, value = TRCscorefile)
+                  TRCscorefile = read.table(full_sample_path)
+                  assign(x = s, value = TRCscorefile, envir = .GlobalEnv)
                 }
                 row.transcr.TRC = grep(x = rownames(TRCscorefile), pattern = t)
                 if (length(row.transcr.TRC) > 0) {
@@ -154,7 +168,7 @@ for (is.shift in is.shift.list) {
                   transcr_not_found_trcscorefile = c(transcr_not_found_trcscorefile, t)
                 }
               } else {
-                print(paste0('Warning: ', samplefilepath, ' not found'))
+                print(paste0('Warning: ', full_sample_path, ' not found'))
               }
             }
           }
@@ -244,13 +258,13 @@ for (is.shift in is.shift.list) {
       }
       
       corlistnames = cbind(translist, protlist, corlist, shiftlist)
-      setwd(MITdir)
-      setOrCreatewd('Analysis')
-      setOrCreatewd(comp)
-      setOrCreatewd(paste0('shift_', is.shift))
-      setOrCreatewd(predictive.values)
-      setOrCreatewd(time)
-      setOrCreatewd(paste0('minimum_expressed_samples', minimum_samples))
+      
+      # Construct output path
+      output_base = file.path(MITdir, 'Analysis', comp, paste0('shift_', is.shift), 
+                              predictive.values, time, 
+                              paste0('minimum_expressed_samples', minimum_samples))
+      setOrCreatewd(output_base)
+      
       corlistnames.filenaam = paste0('correlation_results_between_',
                                      predictive.values,
                                      '_values_and_protein_expression.tsv')
@@ -265,12 +279,13 @@ for (is.shift in is.shift.list) {
                                 '_values_and_protein_expression.tsv'), 
                   sep = '\t', quote = F, row.names = T)
       
-      setOrCreatewd('plots/')
-      if (is.shift) {
-        setOrCreatewd('plots_correlations_nproteins_stringencies_optimalshift/')
+      plot_dir = if (is.shift) {
+        file.path(output_base, 'plots', 'plots_correlations_nproteins_stringencies_optimalshift')
       } else {
-        setOrCreatewd('plots_correlations_nproteins_stringencies/')
+        file.path(output_base, 'plots', 'plots_correlations_nproteins_stringencies')
       }
+      setOrCreatewd(plot_dir)
+
       png(paste0('frequency_distribution_correlation_results_between',
                  predictive.values,
                  '_and_protein.png'))
@@ -291,14 +306,13 @@ for (is.shift in is.shift.list) {
                             ' and protein (Min.samples = ', 
                             minimum_samples, ')'), 
               sub = sub, 
-              ylim = c(0,length(corlist)), 
+              # Correct ylim if it was intended to be %
+              ylim = c(0, 100), 
               xlab = 'Correlation values', ylab = '% of proteins')
       dev.off()
-      setTxtProgressBar(pb1, minimum_samples)
     }
-    
+    setTxtProgressBar(pb1, which(predictive.values.list == predictive.values))
   }
-  
 }
 
 close(pb1)

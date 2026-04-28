@@ -1,6 +1,12 @@
 #' Utility functions for TRC and Proteomics analysis
 #' Consolidated from functions.R, functions_JOA.R and analysis scripts.
 
+if (file.exists("config.R")) {
+  source("config.R")
+} else if (file.exists("../config.R")) {
+  source("../config.R")
+}
+
 #' Install and load a list of packages
 #' @param list.of.packages Vector of package names
 forceLibrary <- function(list.of.packages) {
