@@ -14,6 +14,7 @@ A clean, modular architecture allows for reproducible runs:
 
 ```
 analysis_trc/
+├── analysis_trc.Rproj   # RStudio project file
 ├── config.R             # Global paths and experimental parameters
 ├── utils.R              # Common helper functions
 ├── environment.yml      # Conda environment definition for reproducibility
@@ -26,6 +27,7 @@ analysis_trc/
 ├── 05_Compare_Correlations.R      # Comparison between correlations
 ├── 06_Correlation_With_Shifts.R   # Dynamic time-shift enabled correlations
 ├── 07_Time_Shift_Analysis.R       # Half-life and time-shift distributions
+├── analyses/                      # Specialized and auxiliary analyses modules
 ├── data/                          # [Ignored] Raw and processed datasets
 ├── results/                       # [Ignored] Analysis outputs (TSV, RDA)
 ├── figures/                       # [Ignored] Output figures (PDF, PNG)

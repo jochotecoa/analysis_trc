@@ -10,7 +10,7 @@
 #' Outputs:
 #' - Comparison plots of half-lives across different time-shifts
 
-source("../utils.R")
+source("../../utils.R")
 forceLibrary(c('biomaRt', 'plyr', 'ggplot2', 'scales'))
 
 # INPUT VARIABLES

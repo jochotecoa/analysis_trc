@@ -12,7 +12,7 @@
 #' - Correlation tables (TSV)
 #' - Distribution plots (PNG)
 
-source("../utils.R")
+source("../../utils.R")
 forceLibrary(c('pbmcapply', 'biomaRt'))
 
 ##### Input Variables #####

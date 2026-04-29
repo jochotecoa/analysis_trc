@@ -1,6 +1,6 @@
 # Libraries ---------------------------------------------------------------
 
-source("../functions.R")
+source("../../utils.R")
 forceLibrary(c('biomaRt', "tximport", "dplyr", "DESeq2", "grid", "ggplot2", 
                "pheatmap", "BiocParallel"))
 register(MulticoreParam(20))
