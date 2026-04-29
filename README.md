@@ -20,13 +20,14 @@ analysis_trc/
 ├── environment.yml      # Conda environment definition for reproducibility
 ├── README.md            # Project documentation
 ├── LICENSE              # MIT License
-├── 01_DESeq2_RNA_Seq.R            # DE analysis (DESeq2)
-├── 02_Limma_DEG_Analysis.R        # DE analysis (Limma)
-├── 03_Correlation_TPM_vs_Protein.R # Transcript vs Protein baseline (TPM)
-├── 04_Correlation_TRC_vs_Protein.R # Translation vs Protein baseline (TRC)
-├── 05_Compare_Correlations.R      # Comparison between correlations
-├── 06_Correlation_With_Shifts.R   # Dynamic time-shift enabled correlations
-├── 07_Time_Shift_Analysis.R       # Half-life and time-shift distributions
+├── pipeline/            # Core analysis pipeline scripts
+│   ├── 01_DESeq2_RNA_Seq.R
+│   ├── 02_Limma_DEG_Analysis.R
+│   ├── 03_Correlation_TPM_vs_Protein.R
+│   ├── 04_Correlation_TRC_vs_Protein.R
+│   ├── 05_Compare_Correlations.R
+│   ├── 06_Correlation_With_Shifts.R
+│   └── 07_Time_Shift_Analysis.R
 ├── analyses/                      # Specialized and auxiliary analyses modules
 ├── data/                          # [Ignored] Raw and processed datasets
 ├── results/                       # [Ignored] Analysis outputs (TSV, RDA)
@@ -69,13 +70,13 @@ Before running the pipeline, update `config.R` with the correct paths for your l
 The scripts are designed to be run sequentially from `01` to `07`.
 
 1. **Differential Expression Analysis**
-   - Run `01_DESeq2_RNA_Seq.R` and `02_Limma_DEG_Analysis.R` to compute differentially expressed genes/transcripts.
+   - Run `pipeline/01_DESeq2_RNA_Seq.R` and `pipeline/02_Limma_DEG_Analysis.R` to compute differentially expressed genes/transcripts.
 2. **Correlation Profiling**
-   - Run `03` and `04` to measure basic correlation coefficients between RNA layers and Proteome layers.
+   - Run `03` and `04` scripts in the `pipeline/` directory to measure basic correlation coefficients between RNA layers and Proteome layers.
 3. **Advanced Time-Shift Modeling**
-   - Run `05`, `06`, and `07` to analyze how long it takes for a transcriptomic shift to reflect at the proteomic level, integrating half-life calculations.
+   - Run `05`, `06`, and `07` in `pipeline/` to analyze how long it takes for a transcriptomic shift to reflect at the proteomic level, integrating half-life calculations.
 
-*(You can run them in RStudio via `analysis_trc.Rproj` or from the terminal using `Rscript 01_DESeq2_RNA_Seq.R`, etc.)*
+*(You can run them in RStudio via `analysis_trc.Rproj` or from the terminal using `Rscript pipeline/01_DESeq2_RNA_Seq.R`, etc.)*
 
 ## Output
 

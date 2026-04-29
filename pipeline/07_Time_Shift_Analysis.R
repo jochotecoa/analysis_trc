@@ -7,7 +7,7 @@
 #' - Correlation results with shift information (from 06_Correlation_With_Shifts.R)
 #' - Protein half-life data (Nature 2011)
 
-source("utils.R")
+if (file.exists("utils.R")) { source("utils.R") } else if (file.exists("../utils.R")) { source("../utils.R") }
 forceLibrary(c('biomaRt', 'plyr', 'ggplot2', 'scales'))
 
 # INPUT VARIABLES

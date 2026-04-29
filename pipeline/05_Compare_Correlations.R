@@ -7,7 +7,7 @@
 #' - Correlation results from 03_Correlation_TPM_vs_Protein.R
 #' - Correlation results from 04_Correlation_TRC_vs_Protein.R
 
-source("utils.R")
+if (file.exists("utils.R")) { source("utils.R") } else if (file.exists("../utils.R")) { source("../utils.R") }
 
 ##### Variables #####
 comp = if(exists("DEFAULT_COMP")) DEFAULT_COMP else 'UNTR'

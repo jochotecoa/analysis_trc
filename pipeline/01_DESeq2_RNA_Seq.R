@@ -12,7 +12,7 @@
 #' - DE results (TSV)
 #' - PCA and Heatmap plots
 
-source("utils.R")
+if (file.exists("utils.R")) { source("utils.R") } else if (file.exists("../utils.R")) { source("../utils.R") }
 forceLibrary(c('biomaRt', "tximport", "dplyr", "DESeq2", "grid", "ggplot2", 
                "pheatmap", "BiocParallel"))
 

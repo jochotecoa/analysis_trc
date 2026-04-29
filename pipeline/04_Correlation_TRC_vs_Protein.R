@@ -12,7 +12,7 @@
 #' - Correlation tables (TSV)
 #' - Distribution plots (PNG)
 
-source("utils.R")
+if (file.exists("utils.R")) { source("utils.R") } else if (file.exists("../utils.R")) { source("../utils.R") }
 forceLibrary(c('pbmcapply', 'biomaRt', 'dplyr', 'tibble'))
 
 ##### Input Variables #####

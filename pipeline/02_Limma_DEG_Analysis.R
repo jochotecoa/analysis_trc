@@ -11,7 +11,7 @@
 #' - DEGs lists (TSV)
 #' - Comparison plots (PNG)
 
-source("utils.R")
+if (file.exists("utils.R")) { source("utils.R") } else if (file.exists("../utils.R")) { source("../utils.R") }
 forceLibrary(c('limma', 'dplyr', 'tibble', 'ggplot2', 'reshape2'))
 
 ##### Functions #####
