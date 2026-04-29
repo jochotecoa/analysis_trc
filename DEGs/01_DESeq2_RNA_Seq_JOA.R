@@ -1,6 +1,6 @@
 # Libraries ---------------------------------------------------------------
 
-source('/share/script/hecatos/juantxo/analysis_trc/functions.R')
+source("../functions.R")
 forceLibrary(c('biomaRt', "tximport", "dplyr", "DESeq2", "grid", "ggplot2", 
                "pheatmap", "BiocParallel"))
 register(MulticoreParam(20))

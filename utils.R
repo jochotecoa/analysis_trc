@@ -526,3 +526,16 @@ saveMetadata <- function(x, dir = 'metadata') {
   }
   setwd(original_wd)
 }
+
+#' Get the latest timestamped directory in a path
+#' @param base_path Base directory to search in
+#' @param pattern Optional pattern to filter directories
+getLatestTimestampDir <- function(base_path, pattern = NULL) {
+  if (!dir.exists(base_path)) return(NULL)
+  dirs = list.dirs(base_path, recursive = FALSE)
+  if (!is.null(pattern)) {
+    dirs = dirs[grep(pattern, dirs)]
+  }
+  if (length(dirs) == 0) return(NULL)
+  return(tail(sort(dirs), 1))
+}
