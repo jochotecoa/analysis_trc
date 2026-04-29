@@ -1,0 +1,31 @@
+name: analysis_trc
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base>=4.0
+  - r-dplyr
+  - r-tibble
+  - r-ggplot2
+  - r-scales
+  - r-plyr
+  - r-reshape2
+  - r-pbmcapply
+  - r-foreach
+  - r-doparallel
+  - r-venndiagram
+  - r-upsetr
+  - r-lattice
+  - r-statmod
+  - r-devtools
+  - r-corrplot
+  - r-rcolorbrewer
+  - r-pheatmap
+  - bioconductor-biomart
+  - bioconductor-limma
+  - bioconductor-edger
+  - bioconductor-deseq2
+  - bioconductor-tximport
+  - bioconductor-biocparallel
+  - r-ggbiplot

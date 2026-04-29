@@ -2,3 +2,34 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rapp.history
+.DS_Store
+
+# Data and results directories
+data/
+results/
+figures/
+plots/
+logs/
+*.pdf
+*.png
+*.html
+*.nb.html
+
+# R environment
+renv/library/
+renv/local/
+renv/staging/
+renv/python/
+.Rprofile
+
+# Python environments (if used alongside R)
+.env/
+venv/
+__pycache__/
+*.pyc
+
+# Temporary files
+*.tmp
+*.temp
+*~
